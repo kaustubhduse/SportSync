@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Auth Service
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - '5001:5001'
+    environment:
+      DATABASE_URL: "postgresql://kaustubh:kaustubh123@postgres_auth:5432/authdb"
+      ACCESS_TOKEN_SECRET: "kaustubh"
+      ACCESS_TOKEN_EXPIRY: "1h"
+      REFRESH_TOKEN_SECRET: "kaustubh"
+      REFRESH_TOKEN_EXPIRY: "7d"
+    depends_on:
+      - postgres_auth
+    networks:
+      - app-network
+    volumes:
+      - ./auth-service:/app
+      - /app/node_modules
+
+  # Auth DB
+  postgres_auth:
+    image: postgres:15
+    container_name: postgres_auth
+    restart: always
+    environment:
+      POSTGRES_USER: kaustubh
+      POSTGRES_PASSWORD: kaustubh123
+      POSTGRES_DB: authdb
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # User Service
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - '5002:5002'
+    environment:
+      DATABASE_URL: "postgresql://kaustubh:kaustubh123@postgres_user:5432/userdb"
+      ACCESS_TOKEN_SECRET: "kaustubh"
+    depends_on:
+      - postgres_user
+    networks:
+      - app-network
+    volumes:
+      - ./user-service:/app
+      - /app/node_modules
+
+  # User DB
+  postgres_user:
+    image: postgres:15
+    container_name: postgres_user
+    restart: always
+    environment:
+      POSTGRES_USER: kaustubh
+      POSTGRES_PASSWORD: kaustubh123
+      POSTGRES_DB: userdb
+    ports:
+      - '5434:5432'
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+volumes:
+  postgres_auth_data:
+  postgres_user_data:
+
+networks:
+  app-network:
+    driver: bridge
