@@ -130,44 +130,44 @@ services:
     networks:
       - app-network
 
-  # # Live Score Service
-  # live-score-service:
-  #   build: ./live-score-service
-  #   container_name: live-score-service
-  #   ports:
-  #     - '5006:5006'
-  #   env_file:
-  #     - ./live-score-service/.env
-  #   depends_on:
-  #     - mongo_live_score
-  #     - redis_live_score
-  #   networks:
-  #     - app-network
-  #   volumes:
-  #     - ./live-score-service:/app
-  #     - /app/node_modules
+  # Live Score Service
+  live-score-service:
+    build: ./live-score-service
+    container_name: live-score-service
+    ports:
+      - '5006:5006'
+    env_file:
+      - ./live-score-service/.env
+    depends_on:
+      - mongo_live_score
+      - redis_live_score
+    networks:
+      - app-network
+    volumes:
+      - ./live-score-service:/app
+      - /app/node_modules
 
-  # # MongoDB for Live Score Service
-  # mongo_live_score:
-  #   image: mongo:latest
-  #   container_name: mongo_live_score
-  #   restart: always
-  #   ports:
-  #     - '27020:27017'
-  #   volumes:
-  #     - mongo_live_score_data:/data/db
-  #   networks:
-  #     - app-network
+  # MongoDB for Live Score Service
+  mongo_live_score:
+    image: mongo:latest
+    container_name: mongo_live_score
+    restart: always
+    ports:
+      - '27020:27017'
+    volumes:
+      - mongo_live_score_data:/data/db
+    networks:
+      - app-network
 
-  # # Redis for Live Score Service
-  # redis_live_score:
-  #   image: redis:latest
-  #   container_name: redis_live_score
-  #   restart: always
-  #   ports:
-  #     - '6381:6379'
-  #   networks:
-  #     - app-network
+  # Redis for Live Score Service
+  redis_live_score:
+    image: redis:latest
+    container_name: redis_live_score
+    restart: always
+    ports:
+      - '6381:6379'
+    networks:
+      - app-network
 
   # # Payment Service
   #   # Payment Service
@@ -257,7 +257,7 @@ volumes:
   postgres_user_data:
   mongo_event_data:
   mongo_auction_data:
-  # mongo_live_score_data:
+  mongo_live_score_data:
   # mongo_payment_data:
   rabbitmq_data:
 
