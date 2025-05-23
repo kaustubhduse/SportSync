@@ -24,11 +24,11 @@ export const VerifyJWT = asyncHandler(async (req, res, next) => {
         updatedAt: true,
       },
     });
-
+    
     if (!user) {
       return res.status(404).json(new ApiError(404, "User not found"));
     }
-
+    
     // User has logged out — block access
     if (!user.refreshToken) {
       return res.status(401).json(new ApiError(401, "Session expired. Please log in again."));

@@ -90,45 +90,45 @@ services:
     networks:
       - app-network
 
-  # # Auction Service
-  # auction-service:
-  #   build: ./auction-service
-  #   container_name: auction-service
-  #   ports:
-  #     - '5004:5004'
-  #   env_file:
-  #     - ./auction-service/.env
-  #   depends_on:
-  #     - mongo_auction
-  #     - redis_auction
-  #     - rabbitmq
-  #   networks:
-  #     - app-network
-  #   volumes:
-  #     - ./auction-service:/app
-  #     - /app/node_modules
+  # Auction Service
+  auction-service:
+    build: ./auction-service
+    container_name: auction-service
+    ports:
+      - '5004:5004'
+    env_file:
+      - ./auction-service/.env
+    depends_on:
+      - mongo_auction
+      - redis_auction
+      - rabbitmq
+    networks:
+      - app-network
+    volumes:
+      - ./auction-service:/app
+      - /app/node_modules
 
-  # # MongoDB for Auction Service
-  # mongo_auction:
-  #   image: mongo:latest
-  #   container_name: mongo_auction
-  #   restart: always
-  #   ports:
-  #     - '27019:27017'
-  #   volumes:
-  #     - mongo_auction_data:/data/db
-  #   networks:
-  #     - app-network
+  # MongoDB for Auction Service
+  mongo_auction:
+    image: mongo:latest
+    container_name: mongo_auction
+    restart: always
+    ports:
+      - '27019:27017'
+    volumes:
+      - mongo_auction_data:/data/db
+    networks:
+      - app-network
 
-  # # Redis for Auction Service
-  # redis_auction:
-  #   image: redis:latest
-  #   container_name: redis_auction
-  #   restart: always
-  #   ports:
-  #     - '6380:6379'
-  #   networks:
-  #     - app-network
+  # Redis for Auction Service
+  redis_auction:
+    image: redis:latest
+    container_name: redis_auction
+    restart: always
+    ports:
+      - '6380:6379'
+    networks:
+      - app-network
 
   # # Live Score Service
   # live-score-service:
@@ -256,7 +256,7 @@ volumes:
   postgres_auth_data:
   postgres_user_data:
   mongo_event_data:
-  # mongo_auction_data:
+  mongo_auction_data:
   # mongo_live_score_data:
   # mongo_payment_data:
   rabbitmq_data:
