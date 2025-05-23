@@ -7,12 +7,8 @@ services:
     container_name: auth-service
     ports:
       - '5001:5001'
-    environment:
-      DATABASE_URL: "postgresql://kaustubh:kaustubh123@postgres_auth:5432/authdb"
-      ACCESS_TOKEN_SECRET: "kaustubh"
-      ACCESS_TOKEN_EXPIRY: "1h"
-      REFRESH_TOKEN_SECRET: "kaustubh"
-      REFRESH_TOKEN_EXPIRY: "7d"
+    env_file:
+      - ./auth-service/.env
     depends_on:
       - postgres_auth
     networks:
@@ -26,10 +22,8 @@ services:
     image: postgres:15
     container_name: postgres_auth
     restart: always
-    environment:
-      POSTGRES_USER: kaustubh
-      POSTGRES_PASSWORD: kaustubh123
-      POSTGRES_DB: authdb
+    env_file:
+      - ./auth-service/db.env
     ports:
       - '5433:5432'
     volumes:
@@ -43,9 +37,8 @@ services:
     container_name: user-service
     ports:
       - '5002:5002'
-    environment:
-      DATABASE_URL: "postgresql://kaustubh:kaustubh123@postgres_user:5432/userdb"
-      ACCESS_TOKEN_SECRET: "kaustubh"
+    env_file:
+      - ./user-service/.env
     depends_on:
       - postgres_user
     networks:
@@ -59,10 +52,8 @@ services:
     image: postgres:15
     container_name: postgres_user
     restart: always
-    environment:
-      POSTGRES_USER: kaustubh
-      POSTGRES_PASSWORD: kaustubh123
-      POSTGRES_DB: userdb
+    env_file:
+      - ./user-service/db.env
     ports:
       - '5434:5432'
     volumes:
@@ -70,9 +61,205 @@ services:
     networks:
       - app-network
 
+  # Event Service
+  event-service:
+    build: ./event-service
+    container_name: event-service
+    ports:
+      - '5003:5003'
+    env_file:
+      - ./event-service/.env
+    depends_on:
+      - mongo_event
+      - rabbitmq
+    networks:
+      - app-network
+    volumes:
+      - ./event-service:/app
+      - /app/node_modules
+
+  # MongoDB for Event Service
+  mongo_event:
+    image: mongo:latest
+    container_name: mongo_event
+    restart: always
+    ports:
+      - '27018:27017'
+    volumes:
+      - mongo_event_data:/data/db
+    networks:
+      - app-network
+
+  # # Auction Service
+  # auction-service:
+  #   build: ./auction-service
+  #   container_name: auction-service
+  #   ports:
+  #     - '5004:5004'
+  #   env_file:
+  #     - ./auction-service/.env
+  #   depends_on:
+  #     - mongo_auction
+  #     - redis_auction
+  #     - rabbitmq
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./auction-service:/app
+  #     - /app/node_modules
+
+  # # MongoDB for Auction Service
+  # mongo_auction:
+  #   image: mongo:latest
+  #   container_name: mongo_auction
+  #   restart: always
+  #   ports:
+  #     - '27019:27017'
+  #   volumes:
+  #     - mongo_auction_data:/data/db
+  #   networks:
+  #     - app-network
+
+  # # Redis for Auction Service
+  # redis_auction:
+  #   image: redis:latest
+  #   container_name: redis_auction
+  #   restart: always
+  #   ports:
+  #     - '6380:6379'
+  #   networks:
+  #     - app-network
+
+  # # Live Score Service
+  # live-score-service:
+  #   build: ./live-score-service
+  #   container_name: live-score-service
+  #   ports:
+  #     - '5006:5006'
+  #   env_file:
+  #     - ./live-score-service/.env
+  #   depends_on:
+  #     - mongo_live_score
+  #     - redis_live_score
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./live-score-service:/app
+  #     - /app/node_modules
+
+  # # MongoDB for Live Score Service
+  # mongo_live_score:
+  #   image: mongo:latest
+  #   container_name: mongo_live_score
+  #   restart: always
+  #   ports:
+  #     - '27020:27017'
+  #   volumes:
+  #     - mongo_live_score_data:/data/db
+  #   networks:
+  #     - app-network
+
+  # # Redis for Live Score Service
+  # redis_live_score:
+  #   image: redis:latest
+  #   container_name: redis_live_score
+  #   restart: always
+  #   ports:
+  #     - '6381:6379'
+  #   networks:
+  #     - app-network
+
+  # # Payment Service
+  #   # Payment Service
+  # payment-service:
+  #   build: ./payment-service
+  #   container_name: payment-service
+  #   ports:
+  #     - '5005:5005'
+  #   env_file:
+  #     - ./payment-service/.env
+  #   depends_on:
+  #     - mongo_payment
+  #     - redis_payment
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./payment-service:/app
+  #     - /app/node_modules
+
+
+
+  # # MongoDB for Payment Service
+  # mongo_payment:
+  #   image: mongo:latest
+  #   container_name: mongo_payment
+  #   restart: always
+  #   ports:
+  #     - '27021:27017'
+  #   volumes:
+  #     - mongo_payment_data:/data/db
+  #   networks:
+  #     - app-network
+  
+  # redis_payment:
+  #   image: redis:latest
+  #   container_name: redis_payment
+  #   restart: always
+  #   ports:
+  #     - '6382:6379'
+  #   networks:
+  #     - app-network
+      
+  # RabbitMQ Service
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    env_file:
+      - ./rmq.env
+    networks:
+      - app-network
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  # api-gateway:
+  #   build: ./api-gateway
+  #   container_name: api-gateway
+  #   ports:
+  #     - '5000:5000'
+  #   env_file:
+  #     - ./api-gateway/.env
+  #   depends_on:
+  #     - auth-service
+  #     - user-service
+  #     - event-service
+  #     - auction-service
+  #     - payment-service
+  #     - live-score-service
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./api-gateway:/app
+  #     - /app/node_modules
+
+
 volumes:
   postgres_auth_data:
   postgres_user_data:
+  mongo_event_data:
+  # mongo_auction_data:
+  # mongo_live_score_data:
+  # mongo_payment_data:
+  rabbitmq_data:
 
 networks:
   app-network:
