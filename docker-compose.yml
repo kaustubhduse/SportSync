@@ -169,46 +169,46 @@ services:
     networks:
       - app-network
 
-  # # Payment Service
-  #   # Payment Service
-  # payment-service:
-  #   build: ./payment-service
-  #   container_name: payment-service
-  #   ports:
-  #     - '5005:5005'
-  #   env_file:
-  #     - ./payment-service/.env
-  #   depends_on:
-  #     - mongo_payment
-  #     - redis_payment
-  #   networks:
-  #     - app-network
-  #   volumes:
-  #     - ./payment-service:/app
-  #     - /app/node_modules
+  # Payment Service
+    # Payment Service
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - '5005:5005'
+    env_file:
+      - ./payment-service/.env
+    depends_on:
+      - mongo_payment
+      - redis_payment
+    networks:
+      - app-network
+    volumes:
+      - ./payment-service:/app
+      - /app/node_modules
 
 
 
-  # # MongoDB for Payment Service
-  # mongo_payment:
-  #   image: mongo:latest
-  #   container_name: mongo_payment
-  #   restart: always
-  #   ports:
-  #     - '27021:27017'
-  #   volumes:
-  #     - mongo_payment_data:/data/db
-  #   networks:
-  #     - app-network
+  # MongoDB for Payment Service
+  mongo_payment:
+    image: mongo:latest
+    container_name: mongo_payment
+    restart: always
+    ports:
+      - '27021:27017'
+    volumes:
+      - mongo_payment_data:/data/db
+    networks:
+      - app-network
   
-  # redis_payment:
-  #   image: redis:latest
-  #   container_name: redis_payment
-  #   restart: always
-  #   ports:
-  #     - '6382:6379'
-  #   networks:
-  #     - app-network
+  redis_payment:
+    image: redis:latest
+    container_name: redis_payment
+    restart: always
+    ports:
+      - '6382:6379'
+    networks:
+      - app-network
       
   # RabbitMQ Service
   rabbitmq:
@@ -258,7 +258,7 @@ volumes:
   mongo_event_data:
   mongo_auction_data:
   mongo_live_score_data:
-  # mongo_payment_data:
+  mongo_payment_data:
   rabbitmq_data:
 
 networks:
