@@ -6,16 +6,16 @@ pipeline {
     }
 
     environment {
-        PORT=5001
-        DATABASE_URL="postgresql://kaustubh:kaustubh123@postgres_auth:5432/authdb"
-        ACCESS_TOKEN_SECRET=kaustubh
-        ACCESS_TOKEN_EXPIRY=1h
-        REFRESH_TOKEN_SECRET=kaustubh
-        REFRESH_TOKEN_EXPIRY=7d
-        GOOGLE_CLIENT_ID=530067300231-p246llgkoqo323lpf9jfq2tp5uih3d6g.apps.googleusercontent.com
-        GOOGLE_CLIENT_SECRET=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
-        GOOGLE_CALLBACK_URL=http://localhost:5001/api/auth/google/callback
-        SESSION_SECRET=fa356d375a7c85c5fdba3c646bc657bf335817a95169694f4dbbacc8a0bc5516
+        PORT = "5001"
+        DATABASE_URL = "postgresql://kaustubh:kaustubh123@postgres_auth:5432/authdb"
+        ACCESS_TOKEN_SECRET = "kaustubh"
+        ACCESS_TOKEN_EXPIRY = "1h"
+        REFRESH_TOKEN_SECRET = "kaustubh"
+        REFRESH_TOKEN_EXPIRY = "7d"
+        GOOGLE_CLIENT_ID = "530067300231-p246llgkoqo323lpf9jfq2tp5uih3d6g.apps.googleusercontent.com"
+        GOOGLE_CLIENT_SECRET = "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"
+        GOOGLE_CALLBACK_URL = "http://localhost:5001/api/auth/google/callback"
+        SESSION_SECRET = "fa356d375a7c85c5fdba3c646bc657bf335817a95169694f4dbbacc8a0bc5516"
     }
 
     stages {
