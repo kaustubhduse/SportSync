@@ -2,7 +2,7 @@ pipeline {
     agent { label 'Jenkins-Agent' }
 
     tools {
-        nodejs 'Node18' // Make sure this is configured in Jenkins
+        nodejs 'Node18'
     }
 
     environment {
@@ -62,6 +62,18 @@ pipeline {
             steps {
                 dir('auth-service') {
                     sh 'docker build -t auth-service:latest .'
+                    sh 'docker tag auth-service:latest kaustubhduse/auth-service:latest'
+                }
+            }
+        }
+
+        stage("Push to Docker Hub") {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push kaustubhduse/auth-service:latest
+                    '''
                 }
             }
         }
