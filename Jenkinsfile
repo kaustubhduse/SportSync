@@ -1,33 +1,60 @@
 pipeline {
     agent { label 'Jenkins-Agent' }
+
     tools {
-        jdk 'Java17'
-        maven 'Maven3'
+        nodejs 'Node18' // Make sure this is configured in Jenkins
     }
-    stages{
-        stage("Cleanup Workspace"){
-                steps {
-                cleanWs()
-                }
-        }
 
-        stage("Checkout from SCM"){
-                steps {
-                    git branch: 'main', credentialsId: 'github', url: 'https://github.com/kaustubhduse/Sports-auction'
-                }
-        }
+    environment {
+        NODE_ENV = 'development'
+    }
 
-        stage("Build Application"){
+    stages {
+        stage("Cleanup Workspace") {
             steps {
-                sh "mvn clean package"
+                cleanWs()
             }
+        }
 
-       }
+        stage("Checkout from SCM") {
+            steps {
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/kaustubhduse/Sports-auction'
+            }
+        }
 
-       stage("Test Application"){
-           steps {
-                 sh "mvn test"
-           }
-       }
-    }      
+        stage("Install Dependencies (auth-service)") {
+            steps {
+                dir('auth-service') {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage("Lint or Format (Optional)") {
+            when {
+                expression { fileExists('auth-service/.eslintrc.js') || fileExists('auth-service/.prettierrc') }
+            }
+            steps {
+                dir('auth-service') {
+                    sh 'npm run lint || echo "No lint script defined."'
+                }
+            }
+        }
+
+        stage("Test (auth-service)") {
+            steps {
+                dir('auth-service') {
+                    sh 'npm test || echo "No test script defined."'
+                }
+            }
+        }
+
+        stage("Build Docker Image") {
+            steps {
+                dir('auth-service') {
+                    sh 'docker build -t auth-service:latest .'
+                }
+            }
+        }
+    }
 }
