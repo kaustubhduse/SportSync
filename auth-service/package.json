@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "node src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "echo \"No tests defined\" && exit 0"
   },
   "keywords": [],
   "author": "",
