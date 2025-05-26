@@ -82,17 +82,15 @@ pipeline {
       }
     }
 
-    stage("Checkout GitOps Repo") {
+    stage("Checkout Repo") {
       steps {
-        dir('gitops') {
           git branch: 'main', credentialsId: 'github', url: 'https://github.com/kaustubhduse/Sports-auction'
-        }
       }
     }
 
     stage("Update Deployment Tag") {
       steps {
-        dir('gitops') {
+        dir('argocd/auth-service') {
           sh '''
             cat deployment.yaml
             sed -i "s|${APP_NAME}:.*|${APP_NAME}:${IMAGE_TAG}|g" deployment.yaml
@@ -104,7 +102,6 @@ pipeline {
 
     stage("Commit & Push Manifest") {
       steps {
-        dir('gitops') {
           sh '''
             git config --global user.name "kaustubhduse"
             git config --global user.email "202251045@iiitvadodara.ac.in"
@@ -114,7 +111,6 @@ pipeline {
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
             sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
           }
-        }
       }
     }
 
