@@ -6,21 +6,23 @@ pipeline {
   }
 
   environment {
-    IMAGE_TAG = "auth-service:${BUILD_NUMBER}"
-    IMAGE_NAME = "kaustubhduse/${IMAGE_TAG}"
-    APP_NAME = "register-app-pipeline"
+    // DockerHub namespace
+    DOCKERHUB_NAMESPACE = "kaustubhduse"
 
-    // Secrets and tokens
-    PORT = "5001"
-    DATABASE_URL = "postgresql://kaustubh:kaustubh123@postgres_auth:5432/authdb"
+    // Secrets for auth-service
+    AUTH_PORT = "5001"
+    AUTH_DATABASE_URL = "postgresql://kaustubh:kaustubh123@postgres_auth:5432/authdb"
     ACCESS_TOKEN_SECRET = "kaustubh"
-    ACCESS_TOKEN_EXPIRY = "1h"
     REFRESH_TOKEN_SECRET = "kaustubh"
-    REFRESH_TOKEN_EXPIRY = "7d"
     GOOGLE_CLIENT_ID = "530067300231-p246llgkoqo323lpf9jfq2tp5uih3d6g.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET = "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"
     GOOGLE_CALLBACK_URL = "http://localhost:5001/api/auth/google/callback"
     SESSION_SECRET = "fa356d375a7c85c5fdba3c646bc657bf335817a95169694f4dbbacc8a0bc5516"
+
+    // Secrets for user-service
+    USER_PORT = "5002"
+    USER_DATABASE_URL = "postgresql://kaustubh:kaustubh123@postgres_user:5432/userdb"
+    USER_ACCESS_TOKEN_SECRET = "kaustubh"
   }
 
   stages {
@@ -36,7 +38,10 @@ pipeline {
       }
     }
 
-    stage("Install Dependencies") {
+    // ============================
+    // ---- AUTH SERVICE STEPS ----
+    // ============================
+    stage("Auth - Install Dependencies") {
       steps {
         dir('auth-service') {
           sh 'npm install'
@@ -44,7 +49,7 @@ pipeline {
       }
     }
 
-    stage("Lint") {
+    stage("Auth - Lint") {
       when {
         expression { fileExists('auth-service/.eslintrc.js') || fileExists('auth-service/.prettierrc') }
       }
@@ -55,7 +60,7 @@ pipeline {
       }
     }
 
-    stage("Test") {
+    stage("Auth - Test") {
       steps {
         dir('auth-service') {
           sh 'npm test || echo "No tests configured"'
@@ -63,51 +68,34 @@ pipeline {
       }
     }
 
-    stage("Build Docker Image") {
+    stage("Auth - Build & Push Docker Image") {
       steps {
-        dir('auth-service') {
-          sh "docker build -t ${IMAGE_NAME} ."
+        script {
+          def authTag = "auth-service:${BUILD_NUMBER}"
+          def authImage = "${DOCKERHUB_NAMESPACE}/${authTag}"
+          env.AUTH_IMAGE_NAME = authImage
+          dir('auth-service') {
+            sh "docker build -t ${authImage} ."
+            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+              sh '''
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker push ${AUTH_IMAGE_NAME}
+              '''
+            }
+          }
         }
       }
     }
 
-    stage("Push Docker Image") {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-          sh '''
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            docker push ${IMAGE_NAME}
-          '''
-        }
-      }
-    }
-
-    stage("Checkout Repo") {
-      steps {
-          git branch: 'main', credentialsId: 'github', url: 'https://github.com/kaustubhduse/Sports-auction'
-      }
-    }
-
-    stage("Update Deployment Tag") {
+    stage("Auth - Update Deployment & Commit") {
       steps {
         dir('argocd/auth-service') {
           sh '''
-            cat deployment.yaml
-            sed -i "s|kaustubhduse/auth-service:.*|${IMAGE_NAME}|g" deployment.yaml
-            cat deployment.yaml
-          '''
-        }
-      }
-    }
-
-    stage("Commit & Push Manifest") {
-      steps {
-        dir('argocd/auth-service') {
-          sh '''
+            sed -i "s|kaustubhduse/auth-service:.*|${AUTH_IMAGE_NAME}|g" deployment.yaml
             git config --global user.name "kaustubhduse"
             git config --global user.email "202251045@iiitvadodara.ac.in"
             git add deployment.yaml
-            git commit -m "Updated Deployment Manifest to ${IMAGE_TAG}" || echo "No changes to commit"
+            git commit -m "Auth Deployment updated to ${AUTH_IMAGE_NAME}" || echo "No changes to commit"
           '''
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
             sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
@@ -116,12 +104,78 @@ pipeline {
       }
     }
 
+    // =============================
+    // ---- USER SERVICE STEPS -----
+    // =============================
+    stage("User - Install Dependencies") {
+      steps {
+        dir('user-service') {
+          sh 'npm install'
+        }
+      }
+    }
+
+    stage("User - Lint") {
+      when {
+        expression { fileExists('user-service/.eslintrc.js') || fileExists('user-service/.prettierrc') }
+      }
+      steps {
+        dir('user-service') {
+          sh 'npm run lint || echo "Lint not configured"'
+        }
+      }
+    }
+
+    stage("User - Test") {
+      steps {
+        dir('user-service') {
+          sh 'npm test || echo "No tests configured"'
+        }
+      }
+    }
+
+    stage("User - Build & Push Docker Image") {
+      steps {
+        script {
+          def userTag = "user-service:${BUILD_NUMBER}"
+          def userImage = "${DOCKERHUB_NAMESPACE}/${userTag}"
+          env.USER_IMAGE_NAME = userImage
+          dir('user-service') {
+            sh "docker build -t ${userImage} ."
+            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+              sh '''
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker push ${USER_IMAGE_NAME}
+              '''
+            }
+          }
+        }
+      }
+    }
+
+    stage("User - Update Deployment & Commit") {
+      steps {
+        dir('argocd/user-service') {
+          sh '''
+            sed -i "s|kaustubhduse/user-service:.*|${USER_IMAGE_NAME}|g" deployment.yaml
+            git config --global user.name "kaustubhduse"
+            git config --global user.email "202251045@iiitvadodara.ac.in"
+            git add deployment.yaml
+            git commit -m "User Deployment updated to ${USER_IMAGE_NAME}" || echo "No changes to commit"
+          '''
+          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+          }
+        }
+      }
+    }
 
     stage("Clean Up Docker") {
       steps {
         sh '''
-          echo "Removing Docker image: ${IMAGE_NAME}"
-          docker rmi ${IMAGE_NAME} || echo "Image not found or already removed"
+          echo "Removing Docker images"
+          docker rmi ${AUTH_IMAGE_NAME} || echo "Auth image not found or already removed"
+          docker rmi ${USER_IMAGE_NAME} || echo "User image not found or already removed"
 
           echo "Removing dangling images"
           docker image prune -f || true
@@ -132,15 +186,16 @@ pipeline {
       }
     }
   }
+
   post {
-        always {
-            echo "Pipeline finished."
-        }
-        success {
-            echo "Pipeline completed successfully!"
-        }
-        failure {
-            echo "Pipeline failed!"
-        }
+    always {
+      echo "Pipeline finished."
     }
+    success {
+      echo "Pipeline completed successfully!"
+    }
+    failure {
+      echo "Pipeline failed!"
+    }
+  }
 }
