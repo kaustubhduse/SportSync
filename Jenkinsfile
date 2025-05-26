@@ -92,7 +92,7 @@ pipeline {
 
     stage("Update Deployment Tag") {
       steps {
-        dir('argocd/auth-service') {
+        dir('gitops') {
           sh '''
             cat deployment.yaml
             sed -i "s|${APP_NAME}:.*|${APP_NAME}:${IMAGE_TAG}|g" deployment.yaml
