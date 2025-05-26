@@ -102,6 +102,7 @@ pipeline {
 
     stage("Commit & Push Manifest") {
       steps {
+        dir('argocd/auth-service') {
           sh '''
             git config --global user.name "kaustubhduse"
             git config --global user.email "202251045@iiitvadodara.ac.in"
@@ -111,6 +112,7 @@ pipeline {
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
             sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
           }
+        }
       }
     }
 
