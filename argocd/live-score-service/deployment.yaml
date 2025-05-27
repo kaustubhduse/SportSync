@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: live-score-service
-          image: kaustubhduse/live-score-service:28
+          image: kaustubhduse/live-score-service:30
           ports:
             - containerPort: 5006
           envFrom:
