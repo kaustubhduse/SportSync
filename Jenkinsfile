@@ -23,344 +23,108 @@ pipeline {
       }
     }
 
-    // ============================
-    // ---- AUTH SERVICE STEPS ----
-    // ============================
-    stage('Auth - Install Dependencies') {
-      steps {
-        dir('auth-service') {
-          sh 'npm install'
-        }
-      }
-    }
-
-    stage('Auth - Lint') {
-      when {
-        expression { fileExists('auth-service/.eslintrc.js') || fileExists('auth-service/.prettierrc') }
-      }
-      steps {
-        dir('auth-service') {
-          sh 'npm run lint || echo "Lint not configured"'
-        }
-      }
-    }
-
-    stage('Auth - Test') {
-      steps {
-        dir('auth-service') {
-          sh 'npm test || echo "No tests configured"'
-        }
-      }
-    }
-
-    stage('Auth - Build & Push Docker Image') {
+    // Common function to handle service stages
+    stage('Process Services') {
       steps {
         script {
-          def authTag = "auth-service:${BUILD_NUMBER}"
-          def authImage = "${DOCKERHUB_NAMESPACE}/${authTag}"
-          env.AUTH_IMAGE_NAME = authImage
-          dir('auth-service') {
-            sh "docker build -t ${authImage} ."
-            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-              sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push ${AUTH_IMAGE_NAME}
-              '''
+          // Define the reusable function
+          def processService(serviceName, imageVarName) {
+            stage("${serviceName} - Install Dependencies") {
+              dir("${serviceName}-service") {
+                sh 'npm install'
+              }
+            }
+            stage("${serviceName} - Lint") {
+              when {
+                expression { fileExists("${serviceName}-service/.eslintrc.js") || fileExists("${serviceName}-service/.prettierrc") }
+              }
+              steps {
+                dir("${serviceName}-service") {
+                  sh 'npm run lint || echo "Lint not configured"'
+                }
+              }
+            }
+            stage("${serviceName} - Test") {
+              steps {
+                dir("${serviceName}-service") {
+                  sh 'npm test || echo "No tests configured"'
+                }
+              }
+            }
+            stage("${serviceName} - Build & Push Docker Image") {
+              steps {
+                script {
+                  def serviceTag = "${serviceName}-service:${BUILD_NUMBER}"
+                  def serviceImage = "${DOCKERHUB_NAMESPACE}/${serviceTag}"
+                  env[imageVarName] = serviceImage
+                  dir("${serviceName}-service") {
+                    sh "docker build -t ${serviceImage} ."
+                    withCredentials([
+                      usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+                      string(credentialsId: 'dockerhub-token', variable: 'DOCKERHUB_TOKEN')
+                    ]) {
+                      sh """
+                        # Log in to DockerHub
+                        echo "\${DOCKER_PASS}" | docker login -u "\${DOCKER_USER}" --password-stdin
+
+                        # Get list of tags for the repository
+                        curl -s -H "Authorization: Bearer \${DOCKERHUB_TOKEN}" \
+                          "https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${serviceName}-service/tags?page_size=100" | \
+                          jq -r '.results[].name' | while read tag; do
+                            # Skip the current build tag
+                            if [ "\${tag}" != "${BUILD_NUMBER}" ]; then
+                              echo "Deleting tag \${tag} for ${serviceName}-service"
+                              curl -s -X DELETE -H "Authorization: Bearer \${DOCKERHUB_TOKEN}" \
+                                "https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${serviceName}-service/tags/\${tag}" || \
+                                echo "Failed to delete tag \${tag} (may not exist or insufficient permissions)"
+                            fi
+                          done
+
+                        # Push the new image
+                        docker push \${${imageVarName}}
+                      """
+                    }
+                  }
+                }
+              }
+            }
+            stage("${serviceName} - Update Deployment & Commit") {
+              steps {
+                dir("argocd/${serviceName}-service") {
+                  sh """
+                    sed -i "s|kaustubhduse/${serviceName}-service:.*|\${${imageVarName}}|g" deployment.yaml
+                    git config --global user.name "kaustubhduse"
+                    git config --global user.email "202251045@iiitvadodara.ac.in"
+                    git add deployment.yaml
+                    git commit -m "${serviceName} Deployment updated to \${${imageVarName}}" || echo "No changes to commit"
+                  """
+                  withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    sh """
+                      git pull origin main --rebase
+                      git push https://\${GIT_USER}:\${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main
+                    """
+                  }
+                }
+              }
             }
           }
-        }
-      }
-    }
 
-    stage('Auth - Update Deployment & Commit') {
-      steps {
-        dir('argocd/auth-service') {
-          sh '''
-            sed -i "s|kaustubhduse/auth-service:.*|${AUTH_IMAGE_NAME}|g" deployment.yaml
-            git config --global user.name "kaustubhduse"
-            git config --global user.email "202251045@iiitvadodara.ac.in"
-            git add deployment.yaml
-            git commit -m "Auth Deployment updated to ${AUTH_IMAGE_NAME}" || echo "No changes to commit"
-          '''
-          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh '''
-              git pull origin main --rebase
-              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
-            '''
+          // Process each service
+          def services = [
+            [name: 'auth', imageVar: 'AUTH_IMAGE_NAME'],
+            [name: 'user', imageVar: 'USER_IMAGE_NAME'],
+            [name: 'event', imageVar: 'EVENT_IMAGE_NAME'],
+            [name: 'auction', imageVar: 'AUCTION_IMAGE_NAME'],
+            [name: 'live-score', imageVar: 'LIVESCORE_IMAGE_NAME'],
+            [name: 'payment', imageVar: 'PAYMENT_IMAGE_NAME']
+          ]
+
+          for (service in services) {
+            processService(service.name, service.imageVar)
           }
         }
       }
     }
-
-    // =============================
-    // ---- USER SERVICE STEPS -----
-    // =============================
-    stage('User - Install Dependencies') {
-      steps {
-        dir('user-service') {
-          sh 'npm install'
-        }
-      }
-    }
-
-    stage('User - Lint') {
-      when {
-        expression { fileExists('user-service/.eslintrc.js') || fileExists('user-service/.prettierrc') }
-      }
-      steps {
-        dir('user-service') {
-          sh 'npm run lint || echo "Lint not configured"'
-        }
-      }
-    }
-
-    stage('User - Test') {
-      steps {
-        dir('user-service') {
-          sh 'npm test || echo "No tests configured"'
-        }
-      }
-    }
-
-    stage('User - Build & Push Docker Image') {
-      steps {
-        script {
-          def userTag = "user-service:${BUILD_NUMBER}"
-          def userImage = "${DOCKERHUB_NAMESPACE}/${userTag}"
-          env.USER_IMAGE_NAME = userImage
-          dir('user-service') {
-            sh "docker build -t ${userImage} ."
-            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-              sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push ${USER_IMAGE_NAME}
-              '''
-            }
-          }
-        }
-      }
-    }
-
-    stage('User - Update Deployment & Commit') {
-      steps {
-        dir('argocd/user-service') {
-          sh '''
-            sed -i "s|kaustubhduse/user-service:.*|${USER_IMAGE_NAME}|g" deployment.yaml
-            git config --global user.name "kaustubhduse"
-            git config --global user.email "202251045@iiitvadodara.ac.in"
-            git add deployment.yaml
-            git commit -m "User Deployment updated to ${USER_IMAGE_NAME}" || echo "No changes to commit"
-          '''
-          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh '''
-              git pull origin main --rebase
-              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
-            '''
-          }
-        }
-      }
-    }
-
-    // ========== EVENT SERVICE ==========
-    stage('Event - Install Dependencies') {
-      steps { dir('event-service') { sh 'npm install' } }
-    }
-    stage('Event - Lint') {
-      when { expression { fileExists('event-service/.eslintrc.js') || fileExists('event-service/.prettierrc') } }
-      steps { dir('event-service') { sh 'npm run lint || echo "Lint not configured"' } }
-    }
-    stage('Event - Test') {
-      steps { dir('event-service') { sh 'npm test || echo "No tests configured"' } }
-    }
-    stage('Event - Build & Push Docker Image') {
-      steps {
-        script {
-          def eventTag = "event-service:${BUILD_NUMBER}"
-          def eventImage = "${DOCKERHUB_NAMESPACE}/${eventTag}"
-          env.EVENT_IMAGE_NAME = eventImage
-          dir('event-service') {
-            sh "docker build -t ${eventImage} ."
-            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-              sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push ${EVENT_IMAGE_NAME}
-              '''
-            }
-          }
-        }
-      }
-    }
-    stage('Event - Update Deployment & Commit') {
-      steps {
-        dir('argocd/event-service') {
-          sh '''
-            sed -i "s|kaustubhduse/event-service:.*|${EVENT_IMAGE_NAME}|g" deployment.yaml
-            git config --global user.name "kaustubhduse"
-            git config --global user.email "202251045@iiitvadodara.ac.in"
-            git add deployment.yaml
-            git commit -m "Event Deployment updated to ${EVENT_IMAGE_NAME}" || echo "No changes to commit"
-          '''
-          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh '''
-              git pull origin main --rebase
-              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
-            '''
-          }
-        }
-      }
-    }
-
-    // ========== AUCTION SERVICE ==========
-    stage('Auction - Install Dependencies') {
-      steps { dir('auction-service') { sh 'npm install' } }
-    }
-    stage('Auction - Lint') {
-      when { expression { fileExists('auction-service/.eslintrc.js') || fileExists('auction-service/.prettierrc') } }
-      steps { dir('auction-service') { sh 'npm run lint || echo "Lint not configured"' } }
-    }
-    stage('Auction - Test') {
-      steps { dir('auction-service') { sh 'npm test || echo "No tests configured"' } }
-    }
-    stage('Auction - Build & Push Docker Image') {
-      steps {
-        script {
-          def auctionTag = "auction-service:${BUILD_NUMBER}"
-          def auctionImage = "${DOCKERHUB_NAMESPACE}/${auctionTag}"
-          env.AUCTION_IMAGE_NAME = auctionImage
-          dir('auction-service') {
-            sh "docker build -t ${auctionImage} ."
-            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-              sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push ${AUCTION_IMAGE_NAME}
-              '''
-            }
-          }
-        }
-      }
-    }
-    stage('Auction - Update Deployment & Commit') {
-      steps {
-        dir('argocd/auction-service') {
-          sh '''
-            sed -i "s|kaustubhduse/auction-service:.*|${AUCTION_IMAGE_NAME}|g" deployment.yaml
-            git config --global user.name "kaustubhduse"
-            git config --global user.email "202251045@iiitvadodara.ac.in"
-            git add deployment.yaml
-            git commit -m "Auction Deployment updated to ${AUCTION_IMAGE_NAME}" || echo "No changes to commit"
-          '''
-          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh '''
-              git pull origin main --rebase
-              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
-            '''
-          }
-        }
-      }
-    }
-    
-
-      // ========== LIVE SCORE SERVICE ==========
-    stage("LiveScore - Install Dependencies") {
-      steps { dir('live-score-service') { sh 'npm install' } }
-    }
-    stage("LiveScore - Lint") {
-      when { expression { fileExists('live-score-service/.eslintrc.js') || fileExists('live-score-service/.prettierrc') } }
-      steps { dir('live-score-service') { sh 'npm run lint || echo "Lint not configured"' } }
-    }
-    stage("LiveScore - Test") {
-      steps { dir('live-score-service') { sh 'npm test || echo "No tests configured"' } }
-    }
-    stage("LiveScore - Build & Push Docker Image") {
-      steps {
-        script {
-          def liveScoreTag = "live-score-service:${BUILD_NUMBER}"
-          def liveScoreImage = "${DOCKERHUB_NAMESPACE}/${liveScoreTag}"
-          env.LIVESCORE_IMAGE_NAME = liveScoreImage
-          dir('live-score-service') {
-            sh "docker build -t ${liveScoreImage} ."
-            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-              sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push ${LIVESCORE_IMAGE_NAME}
-              '''
-            }
-          }
-        }
-      }
-    }
-    stage("LiveScore - Update Deployment & Commit") {
-      steps {
-        dir('argocd/live-score-service') {
-          sh '''
-            sed -i "s|kaustubhduse/live-score-service:.*|${LIVESCORE_IMAGE_NAME}|g" deployment.yaml
-            git config --global user.name "kaustubhduse"
-            git config --global user.email "202251045@iiitvadodara.ac.in"
-            git add deployment.yaml
-            git commit -m "LiveScore Deployment updated to ${LIVESCORE_IMAGE_NAME}" || echo "No changes to commit"
-          '''
-          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh '''
-              git pull origin main --rebase
-              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
-            '''
-          }
-        }
-      }
-    }
-
-     // ========== PAYMENT SERVICE ==========
-    stage("Payment - Install Dependencies") {
-      steps { dir('payment-service') { sh 'npm install' } }
-    }
-    stage("Payment - Lint") {
-      when { expression { fileExists('payment-service/.eslintrc.js') || fileExists('payment-service/.prettierrc') } }
-      steps { dir('payment-service') { sh 'npm run lint || echo "Lint not configured"' } }
-    } 
-    stage("Payment - Test") {
-      steps { dir('payment-service') { sh 'npm test || echo "No tests configured"' } }
-    }
-    
-    stage("Payment - Build & Push Docker Image") {
-      steps {
-        script {
-          def paymentTag = "payment-service:${BUILD_NUMBER}"
-          def paymentImage = "${DOCKERHUB_NAMESPACE}/${paymentTag}"
-          env.PAYMENT_IMAGE_NAME = paymentImage
-          dir('payment-service') {
-            sh "docker build -t ${paymentImage} ."
-            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-              sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push ${PAYMENT_IMAGE_NAME}
-              '''
-            }
-          }
-        }
-      }
-    }
-
-    stage("Payment - Update Deployment & Commit") {
-      steps {
-        dir('argocd/payment-service') {
-          sh '''
-            sed -i "s|kaustubhduse/payment-service:.*|${PAYMENT_IMAGE_NAME}|g" deployment.yaml
-            git config --global user.name "kaustubhduse"
-            git config --global user.email "202251045@iiitvadodara.ac.in"
-            git add deployment.yaml
-            git commit -m "Payment Deployment updated to ${PAYMENT_IMAGE_NAME}" || echo "No changes to commit"
-          '''
-          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh '''
-              git pull origin main --rebase
-              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
-            '''
-          }
-        }
-      }
-    }
-
-     // ========== CLEAN UP DOCKER ========== 
 
     stage('Clean Up Docker') {
       steps {
