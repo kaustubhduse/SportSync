@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq_event
+  labels:
+    app: rabbitmq_event
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rabbitmq_event
+  template:
+    metadata:
+      labels:
+        app: rabbitmq_event
+    spec:
+      containers:
+        - name: rabbitmq_event
+          image: kaustubhduse/rabbitmq_event:latest
+          ports:
+            - containerPort: 5672
+          envFrom:
+            - secretRef:
+                name: rabbitmq-secrets

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres_user
+  labels:
+    app: postgres_user
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: postgres_user
+  template:
+    metadata:
+      labels:
+        app: postgres_user
+    spec:
+      containers:
+        - name: postgres_user
+          image: kaustubhduse/postgres_user:latest
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-user-secret

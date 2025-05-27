@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis_live-score
+  labels:
+    app: redis_live-score
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: redis_live-score
+  template:
+    metadata:
+      labels:
+        app: redis_live-score
+    spec:
+      containers:
+        - name: redis_live-score
+          image: kaustubhduse/redis_live-score:latest
+          ports:
+            - containerPort: 6379
