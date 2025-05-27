@@ -111,7 +111,7 @@ pipeline {
             [name: 'event', imageVar: 'EVENT_IMAGE_NAME'],
             [name: 'auction', imageVar: 'AUCTION_IMAGE_NAME'],
             [name: 'live-score', imageVar: 'LIVESCORE_IMAGE_NAME'],
-            [name: 'payment', imageVar: 'PAYMENT_IMAGE_NAME']
+            [name: 'payment', imageVar: 'PAYMENT_IMAGE_NAME'],
             [name: 'mongo_auction', imageVar: 'MONGO_AUCTION_IMAGE_NAME'],
             [name: 'mongo_event', imageVar: 'MONGO_EVENT_IMAGE_NAME'],
             [name: 'mongo_live-score', imageVar: 'MONGO_LIVESCORE_IMAGE_NAME'],
