@@ -7,32 +7,17 @@ pipeline {
 
   environment {
     // DockerHub namespace
-    DOCKERHUB_NAMESPACE = "kaustubhduse"
-
-    // Secrets for auth-service
-    AUTH_PORT = "5001"
-    AUTH_DATABASE_URL = "postgresql://kaustubh:kaustubh123@postgres_auth:5432/authdb"
-    ACCESS_TOKEN_SECRET = "kaustubh"
-    REFRESH_TOKEN_SECRET = "kaustubh"
-    GOOGLE_CLIENT_ID = "530067300231-p246llgkoqo323lpf9jfq2tp5uih3d6g.apps.googleusercontent.com"
-    GOOGLE_CLIENT_SECRET = "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"
-    GOOGLE_CALLBACK_URL = "http://localhost:5001/api/auth/google/callback"
-    SESSION_SECRET = "fa356d375a7c85c5fdba3c646bc657bf335817a95169694f4dbbacc8a0bc5516"
-
-    // Secrets for user-service
-    USER_PORT = "5002"
-    USER_DATABASE_URL = "postgresql://kaustubh:kaustubh123@postgres_user:5432/userdb"
-    USER_ACCESS_TOKEN_SECRET = "kaustubh"
+    DOCKERHUB_NAMESPACE = 'kaustubhduse'
   }
 
   stages {
-    stage("Clean Workspace") {
+    stage('Clean Workspace') {
       steps {
         cleanWs()
       }
     }
 
-    stage("Checkout Code") {
+    stage('Checkout Code') {
       steps {
         git branch: 'main', credentialsId: 'github', url: 'https://github.com/kaustubhduse/Sports-auction'
       }
@@ -41,7 +26,7 @@ pipeline {
     // ============================
     // ---- AUTH SERVICE STEPS ----
     // ============================
-    stage("Auth - Install Dependencies") {
+    stage('Auth - Install Dependencies') {
       steps {
         dir('auth-service') {
           sh 'npm install'
@@ -49,7 +34,7 @@ pipeline {
       }
     }
 
-    stage("Auth - Lint") {
+    stage('Auth - Lint') {
       when {
         expression { fileExists('auth-service/.eslintrc.js') || fileExists('auth-service/.prettierrc') }
       }
@@ -60,7 +45,7 @@ pipeline {
       }
     }
 
-    stage("Auth - Test") {
+    stage('Auth - Test') {
       steps {
         dir('auth-service') {
           sh 'npm test || echo "No tests configured"'
@@ -68,7 +53,7 @@ pipeline {
       }
     }
 
-    stage("Auth - Build & Push Docker Image") {
+    stage('Auth - Build & Push Docker Image') {
       steps {
         script {
           def authTag = "auth-service:${BUILD_NUMBER}"
@@ -87,7 +72,7 @@ pipeline {
       }
     }
 
-    stage("Auth - Update Deployment & Commit") {
+    stage('Auth - Update Deployment & Commit') {
       steps {
         dir('argocd/auth-service') {
           sh '''
@@ -107,7 +92,7 @@ pipeline {
     // =============================
     // ---- USER SERVICE STEPS -----
     // =============================
-    stage("User - Install Dependencies") {
+    stage('User - Install Dependencies') {
       steps {
         dir('user-service') {
           sh 'npm install'
@@ -115,7 +100,7 @@ pipeline {
       }
     }
 
-    stage("User - Lint") {
+    stage('User - Lint') {
       when {
         expression { fileExists('user-service/.eslintrc.js') || fileExists('user-service/.prettierrc') }
       }
@@ -126,7 +111,7 @@ pipeline {
       }
     }
 
-    stage("User - Test") {
+    stage('User - Test') {
       steps {
         dir('user-service') {
           sh 'npm test || echo "No tests configured"'
@@ -134,7 +119,7 @@ pipeline {
       }
     }
 
-    stage("User - Build & Push Docker Image") {
+    stage('User - Build & Push Docker Image') {
       steps {
         script {
           def userTag = "user-service:${BUILD_NUMBER}"
@@ -153,7 +138,7 @@ pipeline {
       }
     }
 
-    stage("User - Update Deployment & Commit") {
+    stage('User - Update Deployment & Commit') {
       steps {
         dir('argocd/user-service') {
           sh '''
@@ -170,7 +155,196 @@ pipeline {
       }
     }
 
-    stage("Clean Up Docker") {
+    // ========== EVENT SERVICE ==========
+    stage('Event - Install Dependencies') {
+      steps { dir('event-service') { sh 'npm install' } }
+    }
+    stage('Event - Lint') {
+      when { expression { fileExists('event-service/.eslintrc.js') || fileExists('event-service/.prettierrc') } }
+      steps { dir('event-service') { sh 'npm run lint || echo "Lint not configured"' } }
+    }
+    stage('Event - Test') {
+      steps { dir('event-service') { sh 'npm test || echo "No tests configured"' } }
+    }
+    stage('Event - Build & Push Docker Image') {
+      steps {
+        script {
+          def eventTag = "event-service:${BUILD_NUMBER}"
+          def eventImage = "${DOCKERHUB_NAMESPACE}/${eventTag}"
+          env.EVENT_IMAGE_NAME = eventImage
+          dir('event-service') {
+            sh "docker build -t ${eventImage} ."
+            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+              sh '''
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker push ${EVENT_IMAGE_NAME}
+              '''
+            }
+          }
+        }
+      }
+    }
+    stage('Event - Update Deployment & Commit') {
+      steps {
+        dir('argocd/event-service') {
+          sh '''
+            sed -i "s|kaustubhduse/event-service:.*|${EVENT_IMAGE_NAME}|g" deployment.yaml
+            git config --global user.name "kaustubhduse"
+            git config --global user.email "202251045@iiitvadodara.ac.in"
+            git add deployment.yaml
+            git commit -m "Event Deployment updated to ${EVENT_IMAGE_NAME}" || echo "No changes to commit"
+          '''
+          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+          }
+        }
+      }
+    }
+
+    // ========== AUCTION SERVICE ==========
+    stage('Auction - Install Dependencies') {
+      steps { dir('auction-service') { sh 'npm install' } }
+    }
+    stage('Auction - Lint') {
+      when { expression { fileExists('auction-service/.eslintrc.js') || fileExists('auction-service/.prettierrc') } }
+      steps { dir('auction-service') { sh 'npm run lint || echo "Lint not configured"' } }
+    }
+    stage('Auction - Test') {
+      steps { dir('auction-service') { sh 'npm test || echo "No tests configured"' } }
+    }
+    stage('Auction - Build & Push Docker Image') {
+      steps {
+        script {
+          def auctionTag = "auction-service:${BUILD_NUMBER}"
+          def auctionImage = "${DOCKERHUB_NAMESPACE}/${auctionTag}"
+          env.AUCTION_IMAGE_NAME = auctionImage
+          dir('auction-service') {
+            sh "docker build -t ${auctionImage} ."
+            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+              sh '''
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker push ${AUCTION_IMAGE_NAME}
+              '''
+            }
+          }
+        }
+      }
+    }
+    stage('Auction - Update Deployment & Commit') {
+      steps {
+        dir('argocd/auction-service') {
+          sh '''
+            sed -i "s|kaustubhduse/auction-service:.*|${AUCTION_IMAGE_NAME}|g" deployment.yaml
+            git config --global user.name "kaustubhduse"
+            git config --global user.email "202251045@iiitvadodara.ac.in"
+            git add deployment.yaml
+            git commit -m "Auction Deployment updated to ${AUCTION_IMAGE_NAME}" || echo "No changes to commit"
+          '''
+          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+          }
+        }
+      }
+    }
+    
+
+      // ========== LIVE SCORE SERVICE ==========
+    stage("LiveScore - Install Dependencies") {
+      steps { dir('live-score-service') { sh 'npm install' } }
+    }
+    stage("LiveScore - Lint") {
+      when { expression { fileExists('live-score-service/.eslintrc.js') || fileExists('live-score-service/.prettierrc') } }
+      steps { dir('live-score-service') { sh 'npm run lint || echo "Lint not configured"' } }
+    }
+    stage("LiveScore - Test") {
+      steps { dir('live-score-service') { sh 'npm test || echo "No tests configured"' } }
+    }
+    stage("LiveScore - Build & Push Docker Image") {
+      steps {
+        script {
+          def liveScoreTag = "live-score-service:${BUILD_NUMBER}"
+          def liveScoreImage = "${DOCKERHUB_NAMESPACE}/${liveScoreTag}"
+          env.LIVESCORE_IMAGE_NAME = liveScoreImage
+          dir('live-score-service') {
+            sh "docker build -t ${liveScoreImage} ."
+            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+              sh '''
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker push ${LIVESCORE_IMAGE_NAME}
+              '''
+            }
+          }
+        }
+      }
+    }
+    stage("LiveScore - Update Deployment & Commit") {
+      steps {
+        dir('argocd/live-score-service') {
+          sh '''
+            sed -i "s|kaustubhduse/live-score-service:.*|${LIVESCORE_IMAGE_NAME}|g" deployment.yaml
+            git config --global user.name "kaustubhduse"
+            git config --global user.email "202251045@iiitvadodara.ac.in"
+            git add deployment.yaml
+            git commit -m "LiveScore Deployment updated to ${LIVESCORE_IMAGE_NAME}" || echo "No changes to commit"
+          '''
+          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+          }
+        }
+      }
+    }
+
+     // ========== PAYMENT SERVICE ==========
+    stage("Payment - Install Dependencies") {
+      steps { dir('payment-service') { sh 'npm install' } }
+    }
+    stage("Payment - Lint") {
+      when { expression { fileExists('payment-service/.eslintrc.js') || fileExists('payment-service/.prettierrc') } }
+      steps { dir('payment-service') { sh 'npm run lint || echo "Lint not configured"' } }
+    } 
+    stage("Payment - Test") {
+      steps { dir('payment-service') { sh 'npm test || echo "No tests configured"' } }
+    }
+    
+    stage("Payment - Build & Push Docker Image") {
+      steps {
+        script {
+          def paymentTag = "payment-service:${BUILD_NUMBER}"
+          def paymentImage = "${DOCKERHUB_NAMESPACE}/${paymentTag}"
+          env.PAYMENT_IMAGE_NAME = paymentImage
+          dir('payment-service') {
+            sh "docker build -t ${paymentImage} ."
+            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+              sh '''
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker push ${PAYMENT_IMAGE_NAME}
+              '''
+            }
+          }
+        }
+      }
+    }
+
+    stage("Payment - Update Deployment & Commit") {
+      steps {
+        dir('argocd/payment-service') {
+          sh '''
+            sed -i "s|kaustubhduse/payment-service:.*|${PAYMENT_IMAGE_NAME}|g" deployment.yaml
+            git config --global user.name "kaustubhduse"
+            git config --global user.email "202251045@iiitvadodara.ac.in"
+            git add deployment.yaml
+            git commit -m "Payment Deployment updated to ${PAYMENT_IMAGE_NAME}" || echo "No changes to commit"
+          '''
+          withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+          }
+        }
+      }
+    }
+
+     // ========== CLEAN UP DOCKER ========== 
+
+    stage('Clean Up Docker') {
       steps {
         sh '''
           echo "Removing Docker images"
@@ -189,13 +363,13 @@ pipeline {
 
   post {
     always {
-      echo "Pipeline finished."
+      echo 'Pipeline finished.'
     }
     success {
-      echo "Pipeline completed successfully!"
+      echo 'Pipeline completed successfully!'
     }
     failure {
-      echo "Pipeline failed!"
+      echo 'Pipeline failed!'
     }
   }
 }

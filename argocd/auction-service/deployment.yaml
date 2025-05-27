@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auction-service
+  labels:
+    app: auction-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auction-service
+  template:
+    metadata:
+      labels:
+        app: auction-service
+    spec:
+      containers:
+        - name: auction-service
+          image: kaustubhduse/auction-service:latest
+          ports:
+            - containerPort: 5004
+          envFrom:
+            - secretRef:
+                name: auction-secrets

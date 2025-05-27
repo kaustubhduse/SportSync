@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: live-score-service
+  labels:
+    app: live-score-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: live-score-service
+  template:
+    metadata:
+      labels:
+        app: live-score-service
+    spec:
+      containers:
+        - name: live-score-service
+          image: kaustubhduse/live-score-service:latest
+          ports:
+            - containerPort: 5006
+          envFrom:
+            - secretRef:
+                name: live-score-secrets

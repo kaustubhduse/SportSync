@@ -16,53 +16,9 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: kaustubhduse/auth-service:12
+          image: kaustubhduse/auth-service:latest
           ports:
             - containerPort: 5001
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: DATABASE_URL
-            - name: ACCESS_TOKEN_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: ACCESS_TOKEN_SECRET
-            - name: ACCESS_TOKEN_EXPIRY
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: ACCESS_TOKEN_EXPIRY
-            - name: REFRESH_TOKEN_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: REFRESH_TOKEN_SECRET
-            - name: REFRESH_TOKEN_EXPIRY
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: REFRESH_TOKEN_EXPIRY
-            - name: GOOGLE_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: GOOGLE_CLIENT_ID
-            - name: GOOGLE_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: GOOGLE_CLIENT_SECRET
-            - name: GOOGLE_CALLBACK_URL
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: GOOGLE_CALLBACK_URL
-            - name: SESSION_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: auth-secrets
-                  key: SESSION_SECRET
-
+          envFrom:
+            - secretRef:
+                name: auth-secrets
