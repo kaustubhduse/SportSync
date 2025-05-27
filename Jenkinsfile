@@ -10,7 +10,7 @@ pipeline {
   }
 
   stages {
-    stage('Clean Workspace') {  
+    stage('Clean Workspace') {
       steps {
         cleanWs()
       }
@@ -27,14 +27,12 @@ pipeline {
         script {
           def processService = { serviceName, imageVarName ->
             // 1. Install Dependencies
-            if(fileExists('package.json')) {
-              stage("${serviceName} - Install Dependencies") {
-                dir("${serviceName}-service") {
-                  sh 'npm install'
-                }
+            stage("${serviceName} - Install Dependencies") {
+              dir("${serviceName}-service") {
+                sh 'npm install'
               }
-            } 
-           
+            }
+
             // 2. Lint
             if (fileExists("${serviceName}-service/.eslintrc.js") || fileExists("${serviceName}-service/.prettierrc")) {
               stage("${serviceName} - Lint") {
@@ -45,14 +43,11 @@ pipeline {
             }
 
             // 3. Test
-            if(fileExists('package.json')){
-              stage("${serviceName} - Test") {
-                dir("${serviceName}-service") {
-                  sh 'npm test || echo "No tests configured"'
-                }
+            stage("${serviceName} - Test") {
+              dir("${serviceName}-service") {
+                sh 'npm test || echo "No tests configured"'
               }
             }
-            
 
             // 4. Build & Push Docker Image
             stage("${serviceName} - Build & Push Docker Image") {
@@ -116,20 +111,34 @@ pipeline {
             [name: 'event', imageVar: 'EVENT_IMAGE_NAME'],
             [name: 'auction', imageVar: 'AUCTION_IMAGE_NAME'],
             [name: 'live-score', imageVar: 'LIVESCORE_IMAGE_NAME'],
-            [name: 'payment', imageVar: 'PAYMENT_IMAGE_NAME'],
-            [name: 'mongo_auction', imageVar: 'MONGO_AUCTION_IMAGE_NAME'],
-            [name: 'mongo_event', imageVar: 'MONGO_EVENT_IMAGE_NAME'],
-            [name: 'mongo_live-score', imageVar: 'MONGO_LIVESCORE_IMAGE_NAME'],
-            [name: 'postgres_auth', imageVar: 'POSTGRES_AUTH_IMAGE_NAME'],
-            [name: 'postgres_user', imageVar: 'POSTGRES_USER_IMAGE_NAME'],
-            [name: 'rabbitmq_auction', imageVar: 'RABBITMQ_AUCTION_IMAGE_NAME'],
-            [name: 'rabbitmq_event', imageVar: 'RABBITMQ_EVENT_IMAGE_NAME'],
-            [name: 'redis_auction', imageVar: 'REDIS_AUCTION_IMAGE_NAME'],
-            [name: 'redis_live-score', imageVar: 'REDIS_LIVESCORE_IMAGE_NAME']
+            [name: 'payment', imageVar: 'PAYMENT_IMAGE_NAME']
           ]
 
           for (service in services) {
             processService(service.name, service.imageVar)
+          }
+        }
+      }
+    }
+
+    stage('Run databases, redis, rabbitmq') {
+      steps {
+        script {
+          def services = [
+            'postgres_auth',
+            'postgres_user',
+            'mongo_event',
+            'mongo_auction',
+            'redis_auction',
+            'mongo_live_score',
+            'redis_live_score',
+            'mongo_payment',
+            'redis_payment',
+            'rabbitmq'
+          ]
+
+          for (service in services) {
+            sh "docker-compose -f docker-compose.yml up -d ${service} || echo 'Failed to start ${service}'"
           }
         }
       }
@@ -145,15 +154,6 @@ pipeline {
           docker rmi ${AUCTION_IMAGE_NAME} || echo "Auction image not found or already removed"
           docker rmi ${LIVESCORE_IMAGE_NAME} || echo "LiveScore image not found or already removed"
           docker rmi ${PAYMENT_IMAGE_NAME} || echo "Payment image not found or already removed"
-          docker rmi ${MONGO_AUCTION_IMAGE_NAME} || echo "Mongo Auction image not found or already removed"
-          docker rmi ${MONGO_EVENT_IMAGE_NAME} || echo "Mongo Event image not found or already removed"
-          docker rmi ${MONGO_LIVESCORE_IMAGE_NAME} || echo "Mongo LiveScore image not found or already removed"
-          docker rmi ${POSTGRES_AUTH_IMAGE_NAME} || echo "Postgres Auth image not found or already removed"
-          docker rmi ${POSTGRES_USER_IMAGE_NAME} || echo "Postgres User image not found or already removed"
-          docker rmi ${RABBITMQ_AUCTION_IMAGE_NAME} || echo "RabbitMQ Auction image not found or already removed"
-          docker rmi ${RABBITMQ_EVENT_IMAGE_NAME} || echo "RabbitMQ Event image not found or already removed"
-          docker rmi ${REDIS_AUCTION_IMAGE_NAME} || echo "Redis Auction image not found or already removed"
-          docker rmi ${REDIS_LIVESCORE_IMAGE_NAME} || echo "Redis LiveScore image not found or already removed" 
           docker rmi $(docker images -f "dangling=true" -q) || echo "No dangling images to remove"
 
           echo "Removing dangling images"
