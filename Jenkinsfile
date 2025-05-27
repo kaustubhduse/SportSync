@@ -60,23 +60,25 @@ pipeline {
 
                 withCredentials([
                   usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
-                  string(credentialsId: 'dockerhub', variable: 'DOCKERHUB_TOKEN')
                 ]) {
                   sh """
                     echo "\${DOCKER_PASS}" | docker login -u "\${DOCKER_USER}" --password-stdin
-
-                    curl -s -H "Authorization: Bearer \${DOCKERHUB_TOKEN}" \
-                      "https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${serviceName}-service/tags?page_size=100" | \
+                    auth_token=\$(curl -s -H "Content-Type: application/json" -X POST \
+                     -d '{"username": "\${DOCKER_USER}", "password": "\${DOCKER_PASS}"}' \
+                     https://hub.docker.com/v2/users/login/ | jq -r .token)
+                    
+                    curl -s -H "Authorization: JWT \${auth_token}" \
+                      "https://hub.docker.com/v2/repositories/${DOCKERHUB_NAMESPACE}/${serviceName}-service/tags?page_size=100" | \
                       jq -r '.results[].name' | while read tag; do
                         if [ "\${tag}" != "${BUILD_NUMBER}" ]; then
                           echo "Deleting tag \${tag} for ${serviceName}-service"
-                          curl -s -X DELETE -H "Authorization: Bearer \${DOCKERHUB_TOKEN}" \
-                            "https://hub.docker.com/v2/namespaces/${DOCKERHUB_NAMESPACE}/repositories/${serviceName}-service/tags/\${tag}" || \
+                          curl -s -X DELETE -H "Authorization: JWT \$auth_token" \
+                            "https://hub.docker.com/v2/repositories/${DOCKERHUB_NAMESPACE}/${serviceName}-service/tags/\${tag}" || \
                             echo "Failed to delete tag \${tag}"
                         fi
                       done
-
                     docker push ${serviceImage}
+                    echo "Docker image ${serviceImage} pushed successfully"
                   """
                 }
               }
