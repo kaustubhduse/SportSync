@@ -1,3 +1,4 @@
+```groovy
 pipeline {
   agent { label 'Jenkins-Agent' }
 
@@ -23,11 +24,11 @@ pipeline {
       }
     }
 
-    // Common function to handle service stages
+    // Process Services stage
     stage('Process Services') {
       steps {
         script {
-          // Define the reusable function
+          // Define the reusable function at the top level of the script block
           def processService(serviceName, imageVarName) {
             stage("${serviceName} - Install Dependencies") {
               dir("${serviceName}-service") {
@@ -119,6 +120,7 @@ pipeline {
             [name: 'payment', imageVar: 'PAYMENT_IMAGE_NAME']
           ]
 
+          // Call the function for each service
           for (service in services) {
             processService(service.name, service.imageVar)
           }
@@ -160,3 +162,5 @@ pipeline {
     }
   }
 }
+```
+
