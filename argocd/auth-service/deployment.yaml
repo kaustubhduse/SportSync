@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: kaustubhduse/auth-service:54
+          image: kaustubhduse/auth-service:6
           ports:
             - containerPort: 5001
           envFrom:
