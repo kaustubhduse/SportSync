@@ -22,6 +22,15 @@ pipeline {
       }
     }
 
+    stage('Install jq'){
+      steps{
+        sh '''
+          sudo apt update
+          sudo apt install -y jq || echo "jq is already installed or installation failed"
+        '''
+      }
+    }
+
     stage('Process Services') {
       steps {
         script {
