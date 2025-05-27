@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: auction-service
-          image: kaustubhduse/auction-service:latest
+          image: kaustubhduse/auction-service:16
           ports:
             - containerPort: 5004
           envFrom:
