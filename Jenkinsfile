@@ -112,6 +112,15 @@ pipeline {
             [name: 'auction', imageVar: 'AUCTION_IMAGE_NAME'],
             [name: 'live-score', imageVar: 'LIVESCORE_IMAGE_NAME'],
             [name: 'payment', imageVar: 'PAYMENT_IMAGE_NAME']
+            [name: 'mongo_auction', imageVar: 'MONGO_AUCTION_IMAGE_NAME'],
+            [name: 'mongo_event', imageVar: 'MONGO_EVENT_IMAGE_NAME'],
+            [name: 'mongo_live-score', imageVar: 'MONGO_LIVESCORE_IMAGE_NAME'],
+            [name: 'postgres_auth', imageVar: 'POSTGRES_AUTH_IMAGE_NAME'],
+            [name: 'postgres_user', imageVar: 'POSTGRES_USER_IMAGE_NAME'],
+            [name: 'rabbitmq_auction', imageVar: 'RABBITMQ_AUCTION_IMAGE_NAME'],
+            [name: 'rabbitmq_event', imageVar: 'RABBITMQ_EVENT_IMAGE_NAME'],
+            [name: 'redis_auction', imageVar: 'REDIS_AUCTION_IMAGE_NAME'],
+            [name: 'redis_live-score', imageVar: 'REDIS_LIVESCORE_IMAGE_NAME']
           ]
 
           for (service in services) {
