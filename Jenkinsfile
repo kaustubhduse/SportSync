@@ -10,7 +10,7 @@ pipeline {
   }
 
   stages {
-    stage('Clean Workspace') {
+    stage('Clean Workspace') {  
       steps {
         cleanWs()
       }
@@ -27,12 +27,14 @@ pipeline {
         script {
           def processService = { serviceName, imageVarName ->
             // 1. Install Dependencies
-            stage("${serviceName} - Install Dependencies") {
-              dir("${serviceName}-service") {
-                sh 'npm install'
+            if(fileExists('package.json')) {
+              stage("${serviceName} - Install Dependencies") {
+                dir("${serviceName}-service") {
+                  sh 'npm install'
+                }
               }
-            }
-
+            } 
+           
             // 2. Lint
             if (fileExists("${serviceName}-service/.eslintrc.js") || fileExists("${serviceName}-service/.prettierrc")) {
               stage("${serviceName} - Lint") {
@@ -43,11 +45,14 @@ pipeline {
             }
 
             // 3. Test
-            stage("${serviceName} - Test") {
-              dir("${serviceName}-service") {
-                sh 'npm test || echo "No tests configured"'
+            if(fileExists('package.json')){
+              stage("${serviceName} - Test") {
+                dir("${serviceName}-service") {
+                  sh 'npm test || echo "No tests configured"'
+                }
               }
             }
+            
 
             // 4. Build & Push Docker Image
             stage("${serviceName} - Build & Push Docker Image") {
