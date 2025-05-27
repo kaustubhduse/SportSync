@@ -83,7 +83,10 @@ pipeline {
             git commit -m "Auth Deployment updated to ${AUTH_IMAGE_NAME}" || echo "No changes to commit"
           '''
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+            sh '''
+              git pull origin main --rebase
+              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
+            '''
           }
         }
       }
@@ -149,7 +152,10 @@ pipeline {
             git commit -m "User Deployment updated to ${USER_IMAGE_NAME}" || echo "No changes to commit"
           '''
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+            sh '''
+              git pull origin main --rebase
+              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
+            '''
           }
         }
       }
@@ -195,7 +201,10 @@ pipeline {
             git commit -m "Event Deployment updated to ${EVENT_IMAGE_NAME}" || echo "No changes to commit"
           '''
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+            sh '''
+              git pull origin main --rebase
+              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
+            '''
           }
         }
       }
@@ -241,7 +250,10 @@ pipeline {
             git commit -m "Auction Deployment updated to ${AUCTION_IMAGE_NAME}" || echo "No changes to commit"
           '''
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+            sh '''
+              git pull origin main --rebase
+              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
+            '''
           }
         }
       }
@@ -288,7 +300,10 @@ pipeline {
             git commit -m "LiveScore Deployment updated to ${LIVESCORE_IMAGE_NAME}" || echo "No changes to commit"
           '''
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+            sh '''
+              git pull origin main --rebase
+              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
+            '''
           }
         }
       }
@@ -336,7 +351,10 @@ pipeline {
             git commit -m "Payment Deployment updated to ${PAYMENT_IMAGE_NAME}" || echo "No changes to commit"
           '''
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-            sh "git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main"
+            sh '''
+              git pull origin main --rebase
+              git push https://$GIT_USER:$GIT_PASS@github.com/kaustubhduse/Sports-auction.git main
+            '''
           }
         }
       }
