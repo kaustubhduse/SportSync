@@ -350,6 +350,11 @@ pipeline {
           echo "Removing Docker images"
           docker rmi ${AUTH_IMAGE_NAME} || echo "Auth image not found or already removed"
           docker rmi ${USER_IMAGE_NAME} || echo "User image not found or already removed"
+          docker rmi ${EVENT_IMAGE_NAME} || echo "Event image not found or already removed"
+          docker rmi ${AUCTION_IMAGE_NAME} || echo "Auction image not found or already removed"
+          docker rmi ${LIVESCORE_IMAGE_NAME} || echo "LiveScore image not found or already removed"
+          docker rmi ${PAYMENT_IMAGE_NAME} || echo "Payment image not found or already removed"
+          docker rmi $(docker images -f "dangling=true" -q) || echo "No dangling images to remove"
 
           echo "Removing dangling images"
           docker image prune -f || true
