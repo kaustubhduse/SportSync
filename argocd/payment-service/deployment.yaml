@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: payment-service
-          image: kaustubhduse/payment-service:26
+          image: kaustubhduse/payment-service:28
           ports:
             - containerPort: 5005
           envFrom:
