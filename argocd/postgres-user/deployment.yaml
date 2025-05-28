@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: postgres-user
-          image: kaustubhduse/postgres_user:latest
+          image: postgres:15
           ports:
             - containerPort: 5432
           envFrom:
