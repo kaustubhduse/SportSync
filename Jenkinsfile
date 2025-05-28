@@ -22,8 +22,8 @@ pipeline {
       }
     }
 
-    stage('Install jq') {
-      steps {
+    stage('Install jq'){
+      steps{
         sh '''
           sudo apt update
           sudo apt install -y jq || echo "jq is already installed or installation failed"
@@ -67,24 +67,25 @@ pipeline {
               dir("${serviceName}-service") {
                 sh "docker build -t ${serviceImage} ."
 
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([
+                  usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+                ]) {
                   sh """
                     echo "\${DOCKER_PASS}" | docker login -u "\${DOCKER_USER}" --password-stdin
                     auth_token=\$(curl -s -H "Content-Type: application/json" -X POST \
-                      -d '{"username": "\${DOCKER_USER}", "password": "\${DOCKER_PASS}"}' \
-                      https://hub.docker.com/v2/users/login/ | jq -r .token)
-
+                     -d '{"username": "\${DOCKER_USER}", "password": "\${DOCKER_PASS}"}' \
+                     https://hub.docker.com/v2/users/login/ | jq -r .token)
+                    
                     curl -s -H "Authorization: JWT \${auth_token}" \
                       "https://hub.docker.com/v2/repositories/${DOCKERHUB_NAMESPACE}/${serviceName}-service/tags?page_size=100" | \
                       jq -r '.results[].name' | while read tag; do
                         if [ "\${tag}" != "${BUILD_NUMBER}" ]; then
                           echo "Deleting tag \${tag} for ${serviceName}-service"
-                          curl -s -X DELETE -H "Authorization: JWT \${auth_token}" \
+                          curl -s -X DELETE -H "Authorization: JWT \$auth_token" \
                             "https://hub.docker.com/v2/repositories/${DOCKERHUB_NAMESPACE}/${serviceName}-service/tags/\${tag}" || \
                             echo "Failed to delete tag \${tag}"
                         fi
                       done
-
                     docker push ${serviceImage}
                     echo "Docker image ${serviceImage} pushed successfully"
                   """
@@ -105,7 +106,7 @@ pipeline {
 
                 withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                   sh """
-                    git pull origin main --rebase || echo "Nothing to pull"
+                    git pull origin main --rebase
                     git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main
                   """
                 }
@@ -129,35 +130,7 @@ pipeline {
       }
     }
 
-    stage('Docker Image Services') {
-      steps {
-        script {
-          def imageVar = "postgres:15"
-          def infraServices = ['postgres-auth', 'postgres-user']
-
-          for (infra in infraServices) {
-            stage("${infra} - Update Deployment & Commit") {
-              dir("argocd/${infra}") {
-                sh """
-                  sed -i "s|image:.*|image: ${imageVar}|" deployment.yaml || true
-                  git config --global user.name "kaustubhduse"
-                  git config --global user.email "202251045@iiitvadodara.ac.in"
-                  git add deployment.yaml service.yaml || true
-                  git commit -m "${infra} Deployment manifest update" || echo "No changes to commit"
-                """
-
-                withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-                  sh """
-                    git pull origin main --rebase || echo "No changes to pull"
-                    git push https://${GIT_USER}:${GIT_PASS}@github.com/kaustubhduse/Sports-auction.git main
-                  """
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    
 
     stage('Clean Up Docker') {
       steps {
