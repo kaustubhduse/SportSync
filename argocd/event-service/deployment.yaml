@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: event-service
-          image: kaustubhduse/event-service:16
+          image: kaustubhduse/event-service:17
           ports:
             - containerPort: 5003
           envFrom:
