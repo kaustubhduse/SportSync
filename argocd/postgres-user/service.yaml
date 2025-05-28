@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres_user
+  name: postgres-user
 spec:
   selector:
-    app: postgres_user
+    app: postgres-user
   ports:
     - protocol: TCP
       port: 5432

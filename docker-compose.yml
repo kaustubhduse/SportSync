@@ -2,20 +2,20 @@ version: '3.8'
 
 services:
   # Auth Service
-  auth-service:
-    build: ./auth-service
-    container_name: auth-service
-    ports:
-      - '5001:5001'
-    env_file:
-      - ./auth-service/.env
-    depends_on:
-      - postgres_auth
-    networks:
-      - app-network
-    volumes:
-      - ./auth-service:/app
-      - /app/node_modules
+  # auth-service:
+  #   build: ./auth-service
+  #   container_name: auth-service
+  #   ports:
+  #     - '5001:5001'
+  #   env_file:
+  #     - ./auth-service/.env
+  #   depends_on:
+  #     - postgres_auth
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./auth-service:/app
+  #     - /app/node_modules
 
   # Auth DB
   postgres_auth:
@@ -32,20 +32,20 @@ services:
       - app-network
 
   # User Service
-  user-service:
-    build: ./user-service
-    container_name: user-service
-    ports:
-      - '5002:5002'
-    env_file:
-      - ./user-service/.env
-    depends_on:
-      - postgres_user
-    networks:
-      - app-network
-    volumes:
-      - ./user-service:/app
-      - /app/node_modules
+  # user-service:
+  #   build: ./user-service
+  #   container_name: user-service
+  #   ports:
+  #     - '5002:5002'
+  #   env_file:
+  #     - ./user-service/.env
+  #   depends_on:
+  #     - postgres_user
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./user-service:/app
+  #     - /app/node_modules
 
   # User DB
   postgres_user:
@@ -62,21 +62,21 @@ services:
       - app-network
 
   # Event Service
-  event-service:
-    build: ./event-service
-    container_name: event-service
-    ports:
-      - '5003:5003'
-    env_file:
-      - ./event-service/.env
-    depends_on:
-      - mongo_event
-      - rabbitmq
-    networks:
-      - app-network
-    volumes:
-      - ./event-service:/app
-      - /app/node_modules
+  # event-service:
+  #   build: ./event-service
+  #   container_name: event-service
+  #   ports:
+  #     - '5003:5003'
+  #   env_file:
+  #     - ./event-service/.env
+  #   depends_on:
+  #     - mongo_event
+  #     - rabbitmq
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./event-service:/app
+  #     - /app/node_modules
 
   # MongoDB for Event Service
   mongo_event:
@@ -91,22 +91,22 @@ services:
       - app-network
 
   # Auction Service
-  auction-service:
-    build: ./auction-service
-    container_name: auction-service
-    ports:
-      - '5004:5004'
-    env_file:
-      - ./auction-service/.env
-    depends_on:
-      - mongo_auction
-      - redis_auction
-      - rabbitmq
-    networks:
-      - app-network
-    volumes:
-      - ./auction-service:/app
-      - /app/node_modules
+  # auction-service:
+  #   build: ./auction-service
+  #   container_name: auction-service
+  #   ports:
+  #     - '5004:5004'
+  #   env_file:
+  #     - ./auction-service/.env
+  #   depends_on:
+  #     - mongo_auction
+  #     - redis_auction
+  #     - rabbitmq
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./auction-service:/app
+  #     - /app/node_modules
 
   # MongoDB for Auction Service
   mongo_auction:
@@ -131,21 +131,21 @@ services:
       - app-network
 
   # Live Score Service
-  live-score-service:
-    build: ./live-score-service
-    container_name: live-score-service
-    ports:
-      - '5006:5006'
-    env_file:
-      - ./live-score-service/.env
-    depends_on:
-      - mongo_live_score
-      - redis_live_score
-    networks:
-      - app-network
-    volumes:
-      - ./live-score-service:/app
-      - /app/node_modules
+  # live-score-service:
+  #   build: ./live-score-service
+  #   container_name: live-score-service
+  #   ports:
+  #     - '5006:5006'
+  #   env_file:
+  #     - ./live-score-service/.env
+  #   depends_on:
+  #     - mongo_live_score
+  #     - redis_live_score
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./live-score-service:/app
+  #     - /app/node_modules
 
   # MongoDB for Live Score Service
   mongo_live_score:
@@ -171,21 +171,21 @@ services:
 
   # Payment Service
     # Payment Service
-  payment-service:
-    build: ./payment-service
-    container_name: payment-service
-    ports:
-      - '5005:5005'
-    env_file:
-      - ./payment-service/.env
-    depends_on:
-      - mongo_payment
-      - redis_payment
-    networks:
-      - app-network
-    volumes:
-      - ./payment-service:/app
-      - /app/node_modules
+  # payment-service:
+  #   build: ./payment-service
+  #   container_name: payment-service
+  #   ports:
+  #     - '5005:5005'
+  #   env_file:
+  #     - ./payment-service/.env
+  #   depends_on:
+  #     - mongo_payment
+  #     - redis_payment
+  #   networks:
+  #     - app-network
+  #   volumes:
+  #     - ./payment-service:/app
+  #     - /app/node_modules
 
 
 
