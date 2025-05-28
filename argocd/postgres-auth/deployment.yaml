@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres_auth
+  name: postgres-auth
   labels:
     app: postgres-auth
 spec:
