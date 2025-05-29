@@ -1,4 +1,5 @@
 import {addPlayerOrTeamToAuction} from '../controllers/auction.controller.js';
+import { getIO } from '../socket/socket.js';
 import amqp from 'amqplib';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -25,6 +26,8 @@ export const consumeMessages = async (queue) => {
           const content = JSON.parse(message.content.toString());
           console.log(`✅ Received message from ${queue}:`, content);
 
+          const io = getIO();
+          io.emit("auction:update", content);
           // Handle the message (e.g., save to DB, update auction, etc.)
           addPlayerOrTeamToAuction(content);
 

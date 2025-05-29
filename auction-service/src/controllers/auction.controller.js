@@ -1,7 +1,11 @@
 import { ApiError } from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import Auction from '../models/auction.model.js';
+import { redisClient} from '../config/redis.js'
 import { getEventDetails } from '../cross-services/auction.cross-service.js';
+
+
+const getAuctionKey = (id) => `auction:${id}`;
 
 export const createAuction = asyncHandler(async (req, res) => {
     try {
@@ -36,7 +40,8 @@ export const createAuction = asyncHandler(async (req, res) => {
   
       const auction = new Auction(auctionData);
       await auction.save();
-  
+      await redisClient.set(getAuctionKey(auction._id), JSON.stringify(auction), { EX: 3600 });
+      
       return res.status(201).json({ message: 'Auction created successfully', auction });
     } 
     catch (err) {
@@ -48,26 +53,36 @@ export const createAuction = asyncHandler(async (req, res) => {
 
 export const getAuctionById = asyncHandler(async (req, res) => {
     const { auctionId } = req.params;
+
     if (!auctionId) {
         return res.status(400).json({ message: 'Auction ID is required' });
     }
-    // Fetch auction details from database (mocked here)
+
+    const cached = await redisClient.get(getAuctionKey(auctionId));
+    if (cached) {
+       return res.status(200).json({ message: 'Auction details fetched (cache)', auctionDetails: JSON.parse(cached) });
+    }
+
     const auctionDetails = await Auction.findById(auctionId);
     if (!auctionDetails) {
         return res.status(404).json({ message: 'Auction not found' });
     }
-    res.status(200).json({ message: 'Auction details fetched successfully', auctionDetails });
 
+    // Save in Redis for 1 hour
+    await redisClient.set(getAuctionKey(auctionId), JSON.stringify(auctionDetails), { EX: 3600 });
+    res.status(200).json({ message: 'Auction details fetched successfully', auctionDetails });
 });
+
 
 
 export const getAllAuctions = asyncHandler(async (req, res) => {
     const auctions = await Auction.find();
     if (!auctions || auctions.length === 0) {
-        return res.status(404).json({ message: 'No auctions found' });
+        return res.status(404).json({ message: "No auctions found" });
     }
-    res.status(200).json({ message: 'All auctions fetched successfully', auctions });
+    res.status(200).json({ message: "All auctions fetched successfully", auctions });
 });
+
 
 
 
@@ -87,6 +102,8 @@ export const getAllPlayers = async (req, res) => {
       return res.status(500).json({ message: "Internal server error" });
     }
   };
+
+
 
 export const getTeamById = async (req, res) => {
     const { id: auctionId, teamId } = req.params;
@@ -108,6 +125,7 @@ export const getTeamById = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 }
+
 
 // Get all teams from a specific auction
 export const getAllTeams = async (req, res) => {
@@ -183,7 +201,8 @@ export const addPlayerOrTeamToAuction = async (data) => {
   
       auction.teams.push(newTeam);
       await auction.save();
-      console.log(`✅ Owner ${username} with team "${teamName}" added to auction with event ID ${eventId}`);
+      await redisClient.set(getAuctionKey(auction._id), JSON.stringify(auction), { EX: 3600 });
+      console.log(`Owner ${username} with team "${teamName}" added to auction with event ID ${eventId}`);
     }
   
     else {
@@ -192,57 +211,66 @@ export const addPlayerOrTeamToAuction = async (data) => {
   };
   
   
-  export const finalizePlayerBid = async (req, res) => {
-    try {
-      const { id: auctionId } = req.params;
-      const { playerId, finalBid, teamName } = req.body;
-  
-      if (!auctionId || !playerId || finalBid == null || !teamName) {
-        return res.status(400).json({ message: "Missing required fields" });
+    export const finalizePlayerBid = async (req, res) => {
+      try {
+        const { id: auctionId } = req.params;
+        const { playerId, finalBid, teamName } = req.body;
+    
+        if (!auctionId || !playerId || finalBid == null || !teamName) {
+          return res.status(400).json({ message: "Missing required fields" });
+        }
+    
+        const auction = await Auction.findById(auctionId);
+        if (!auction) {
+          return res.status(404).json({ message: "Auction not found" });
+        }
+    
+        const player = auction.players.find(p => p.playerId === playerId);
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+    
+        if (player.bidStatus === "bidded") {
+          return res.status(400).json({ message: "Player already bidded" });
+        }
+    
+        // Update player fields
+        player.finalBid = finalBid;
+        player.teamName = teamName;
+        player.bidStatus = "bidded";
+        player.currentStatus = "inactive";
+    
+        const team = auction.teams.find(t => t.teamName === teamName);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
+        }
+        
+        team.players.push({
+          playerId: player.playerId,
+          playerName: player.playerName,
+        });
+        
+        await auction.save();
+        await redisClient.set(getAuctionKey(auction._id), JSON.stringify(auction), { EX: 3600 });
+        
+        // Emit socket event
+        const io = req.io;
+        io.to(auctionId).emit("playerBidFinalized", {
+          auctionId,
+          player,
+          team,
+          message: "Player bid finalized and added to team",
+        })
+    
+        res.status(200).json({
+          message: "Player bid finalized and added to team successfully",
+          player,
+          team,
+        });
+      } 
+      catch (err) {
+        console.error("Error finalizing bid:", err);
+        res.status(500).json({ message: "Internal Server Error" });
       }
-  
-      const auction = await Auction.findById(auctionId);
-      if (!auction) {
-        return res.status(404).json({ message: "Auction not found" });
-      }
-  
-      const player = auction.players.find(p => p.playerId === playerId);
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-  
-      if (player.bidStatus === "bidded") {
-        return res.status(400).json({ message: "Player already bidded" });
-      }
-  
-      // Update player fields
-      player.finalBid = finalBid;
-      player.teamName = teamName;
-      player.bidStatus = "bidded";
-      player.currentStatus = "inactive";
-  
-      const team = auction.teams.find(t => t.teamName === teamName);
-      if (!team) {
-        return res.status(404).json({ message: "Team not found" });
-      }
-      
-      team.players.push({
-        playerId: player.playerId,
-        playerName: player.playerName,
-      });
-      
-      await auction.save();
-  
-      res.status(200).json({
-        message: "Player bid finalized and added to team successfully",
-        player,
-        team,
-      });
-  
-    } 
-    catch (err) {
-      console.error("Error finalizing bid:", err);
-      res.status(500).json({ message: "Internal Server Error" });
-    }
-  };
-  
+    };
+    
