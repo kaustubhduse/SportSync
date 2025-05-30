@@ -1,12 +1,11 @@
-# mongo-event-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: mongo-event
 spec:
   selector:
-    app: mongo-event
+    app: mongo-event   
   ports:
     - protocol: TCP
-      port: 27017
-      targetPort: 27017
+      port: 27017       
+      targetPort: 27017 
