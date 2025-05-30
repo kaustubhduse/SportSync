@@ -21,6 +21,10 @@ app.use(morgan('dev'));
 
 app.use('/api/live-score', liveScoreRoutes);
 
+app.get('/', (req, res) => {
+  res.send('Live-score service is running');
+});
+
 const PORT = process.env.PORT || 5006;
 const MONGO_URI = process.env.MONGO_URI;
 

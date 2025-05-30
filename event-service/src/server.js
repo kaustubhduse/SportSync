@@ -15,6 +15,10 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/event', eventRoutes);
 
+app.get("/", (req, res) => {
+  res.send("Event Service is running");
+});
+
 const PORT = process.env.PORT || 5003;
 
 const startServer = async () => {

@@ -26,6 +26,10 @@ app.use(bodyParser.json());
 
 app.use(limiter);
 
+app.get("/", (req, res) => {
+  res.send("Payment Service is running.");
+});
+
 app.use("/api/payment", paymentRoutes);
 
 app.use(errorHandler);

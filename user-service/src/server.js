@@ -11,6 +11,10 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/v1/users", userRoutes);
 
+app.get("/", (req, res) => {
+    res.send("User Service is running");
+});
+
 const PORT = process.env.PORT || 5002;
 
 app.listen(PORT, () => {

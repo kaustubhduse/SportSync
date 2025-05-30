@@ -20,6 +20,10 @@ app.use((req, res, next) => {
 
 app.use("/api/auctions", auctionRoutes);
 
+app.get("/", (req, res) => {
+  res.send("Auction Service is running");
+});
+
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
