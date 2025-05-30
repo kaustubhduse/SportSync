@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: kaustubhduse/user-service:2
+          image: kaustubhduse/user-service:3
           ports:
             - containerPort: 5002
           envFrom:
