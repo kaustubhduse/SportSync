@@ -233,7 +233,7 @@ ngrok start --all --config ./ngrok.yml
 
 ## Architecture Diagram
 
-![Architecture Diagram](./docs/Sports-application-high-level-system-design.png)
+![Architecture Diagram](./docs/Sports-application(high-level-system-design).png)
 
 *This diagram illustrates the high-level interactions between microservices and the overall infrastructure.*
 
