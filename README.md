@@ -80,7 +80,7 @@ The application comprises **6 independent microservices**:
 - Each microservice is containerized using Docker and connected to its respective database.
 - All six microservices are deployed with **2 replicas (pods)** each on AWS EKS.
 
-![EKS Deployment Pods](./docs/Deployment-pods.png)
+![EKS Deployment Pods](./docs/Deplyment-pods.png)
 
 ---
 
@@ -160,7 +160,7 @@ ngrok start --all --config ./ngrok.yml
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/yourusername/sports-application.git
+   git clone https://github.com/kaustubhduse/Sports-auction.git
    cd sports-application
    ```
 
@@ -247,13 +247,6 @@ ngrok start --all --config ./ngrok.yml
 
 *Real-time metrics and health status of services monitored using Prometheus and visualized via Grafana.*
 
----
-
-## Contributing
-
-Contributions are welcome! Please submit issues or pull requests as needed. Ensure you follow the established contribution guidelines.
-
----
 
 ## License
 
