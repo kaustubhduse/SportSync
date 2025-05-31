@@ -12,7 +12,6 @@ router.route('/:id').delete(VerifyJWT,deleteEvent);
 
 
 // User routes
-4
 // Register for an event
 router.route('/register/:id').post(VerifyJWT,registerForEvent);
 router.route('/').get(VerifyJWT,getAllEvents);
