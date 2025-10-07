@@ -1,0 +1,30 @@
+{
+  "name": "rag-agent-service",
+  "version": "1.0.0",
+  "description": "RAG Agent microservice for Sports Application",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "@pinecone-database/pinecone": "^1.0.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongodb": "^5.9.2",
+    "pg": "^8.11.2",
+    "cron": "^2.3.2",
+    "openai": "^4.35.0",
+    "langchain": "^0.0.134"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "engines": {
+    "node": ">=18.19.0"
+  },
+  "keywords": ["RAG", "LangChain", "Pinecone", "OpenAI", "SportsApp"],
+  "author": "Kaustubh Duse",
+  "license": "MIT"
+}

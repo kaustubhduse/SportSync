@@ -1,0 +1,37 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+*.dockerignore
+Dockerfile_Prod
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Build / Dist folders
+dist/
+build/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Optional: cache folders
+.cache/

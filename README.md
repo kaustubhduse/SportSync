@@ -16,6 +16,7 @@ The application comprises **6 independent microservices**:
 - **auction-service**: Conducts live player/team auctions using Socket.IO.
 - **live-score-service**: Provides real-time match scores and updates.
 - **payment-service**: Processes payments via Stripe.
+- **rag-agent-service**: Provides Q&A related to all the data stored in databases using RAG
 
 ---
 
@@ -36,6 +37,9 @@ The application comprises **6 independent microservices**:
   - `auction-service`: Stores ongoing auction data
   - `live-score-service`: Stores live match data
   - `payment-service`: Stores failed transaction information
+- **Langchain**: for orchestrating retrieval + generation pipelines
+- **OpenAI API**: for LLM-based text generation
+- **Pinecone**: for vector similarity search
 
 ---
 
@@ -55,7 +59,7 @@ The application comprises **6 independent microservices**:
 ### Event Service
 - Enables admins to create events.
 - Allows users to register as players or owners.
-- Retrieves user information via auth tokens and user-service API calls.
+- Retrieves user information via user-service API calls.
 - Publishes registration information to RabbitMQ.
 
 ### Auction Service
@@ -72,6 +76,10 @@ The application comprises **6 independent microservices**:
 ### Payment Service
 - Integrates Stripe for card payments.
 - Stores failed transactions in Redis for retry mechanisms.
+
+### RAG Agent Service
+- Uses LangChain to process user queries, retrieve data, and generate contextual responses.
+- Connects to PostgreSQL(auth & user data), MongoDB (event, auction, score, and payment data), Pinecone (semantic vector search), OpenAI and Hugging Face models for text generation
 
 ---
 
@@ -219,6 +227,21 @@ ngrok start --all --config ./ngrok.yml
      STRIPE_SECRET_KEY=""
      STRIPE_WEBHOOK_SECRET=""
      REDIS_URL=""
+     ```
+
+  - **rag-agent-service**:
+     ```env
+     openaiApiKey=""
+     OPENAI_MODEL=""
+     PG_AUTH_CONN=""
+     PG_USER_CONN=""
+     MONGO_EVENT_URI=""
+     MONGO_AUCTION_URI=""
+     MONGO_LIVESCORE_URI=""
+     MONGO_PAYMENT_URI=""
+     PINECONE_API_KEY=""
+     PINECONE_ENVIRONMENT=""
+     PINECONE_INDEX_NAME=""
      ```
 
 3. **Start services using Docker Compose:**

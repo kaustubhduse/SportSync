@@ -105,7 +105,6 @@ export const registerForEvent = asyncHandler(async (req, res) => {
 
 
 
-// Get owners(team names) of an event
 export const getEventOwners = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const event = await Event.findById(id);
@@ -114,33 +113,42 @@ export const getEventOwners = asyncHandler(async (req, res) => {
   }
 
   const owners = event.participants.filter(p => p.role === 'owner');
-  const ownerIds = owners.map(p => p.userId);
 
-  const participantsArray = await getUsersByIds(ownerIds, req.headers.authorization);
+  const missingOwnerIds = owners
+    .filter(p => !p.username)
+    .map(p => p.userId);
 
-  if (!Array.isArray(participantsArray)) {
-    console.error("Unexpected response shape from user-service:", participantsArray);
-    throw new ApiError(500, "Invalid response from user service");
+  if (missingOwnerIds.length > 0) {
+    const fetchedUsers = await getUsersByIds(missingOwnerIds, req.headers.authorization);
+
+    const usersMap = {};
+    fetchedUsers.forEach(u => {
+      usersMap[u.id] = u.name;
+    });
+
+    event.participants.forEach(p => {
+      if (p.role === 'owner' && !p.username && usersMap[p.userId]) {
+        p.username = usersMap[p.userId];
+      }
+    });
+
+    await event.save(); // update DB with names
   }
-
-  const participantsMap = {};
-  participantsArray.forEach(user => {
-    participantsMap[user.id] = user.name;
-  });
 
   const detailedOwners = owners.map(p => ({
     userId: p.userId,
-    name: participantsMap[p.userId] || "Unknown",
+    name: p.username || "Unknown",
     teamName: p.teamName || "N/A",
     joinedAt: p.joinedAt,
     status: p.status,
-    role: p.role
+    role: p.role,
   }));
 
   return res.status(200).json(
     new ApiResponse(200, detailedOwners, "Event owners fetched successfully")
   );
 });
+
 
 
 
@@ -153,35 +161,37 @@ export const getEventPlayers = asyncHandler(async (req, res) => {
   }
 
   const participants = event.participants;
-  const participantIds = participants.map(p => p.userId);
 
-  // Cross-service call to user-service
-  const participantsArray = await getUsersByIds(participantIds, req.headers.authorization);
+  // Find participants with missing usernames
+  const missingUserIds = participants
+    .filter(p => !p.username)
+    .map(p => p.userId);
 
-  if (!Array.isArray(participantsArray)) {
-    console.error("Unexpected response shape from user-service:", participantsArray);
-    throw new ApiError(500, "Invalid response from user service");
+  if (missingUserIds.length > 0) {
+    const fetchedUsers = await getUsersByIds(missingUserIds, req.headers.authorization);
+
+    const usersMap = {};
+    fetchedUsers.forEach(u => {
+      usersMap[u.id] = u.name;
+    });
+
+    // Update event document with fetched names
+    event.participants.forEach(p => {
+      if (!p.username && usersMap[p.userId]) {
+        p.username = usersMap[p.userId];
+      }
+    });
+
+    await event.save(); // save updated usernames
   }
 
-  const participantsMap = {};
-  participantsArray.forEach(p => {
-    participantsMap[p.id] = p.name;
-  });
-
-  // update username in database
-  event.participants.forEach(p => {
-    if(participantsMap[p.userId]) {
-      p.username = participantsMap[p.userId];
-    }
-  });
-  await event.save();
-
+  // Prepare final response from stored data
   const detailedPlayers = participants.map(p => ({
     userId: p.userId,
-    name: p.username,
+    name: p.username || "Unknown",
     joinedAt: p.joinedAt,
     status: p.status,
-    role: p.role
+    role: p.role,
   }));
 
   return res.status(200).json(
