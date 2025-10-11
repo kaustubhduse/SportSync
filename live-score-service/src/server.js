@@ -6,6 +6,9 @@ import http from 'http';
 import dotenv from 'dotenv';
 
 import { initSocket } from './utils/socket.js';
+import { connectRedis } from './utils/redisClient.js'; 
+import { connectProducer } from './kafka/producer.js'; 
+import { connectConsumer } from './kafka/consumer.js';
 import liveScoreRoutes from './routes/liveScore.routes.js';
 
 dotenv.config();
@@ -22,19 +25,29 @@ app.use(morgan('dev'));
 app.use('/api/live-score', liveScoreRoutes);
 
 app.get('/', (req, res) => {
-  res.send('Live-score service is running');
+    res.send('Live-score service is running');
 });
 
 const PORT = process.env.PORT || 5006;
 const MONGO_URI = process.env.MONGO_URI;
 
-mongoose.connect(MONGO_URI)
-.then(() => {
-  console.log('MongoDB connected');
-  server.listen(PORT, () => {
-    console.log(`Live-score service running on port ${PORT}`);
-  });
-})
-.catch((err) => {
-  console.error('MongoDB connection error:', err);
-});
+const startServer = async () => {
+    try {
+        await mongoose.connect(MONGO_URI);
+        console.log('✅ MongoDB connected');
+
+        await connectRedis(); 
+
+        await connectProducer();
+        await connectConsumer(); 
+
+        server.listen(PORT, () => {
+            console.log(`Live-score service running on port ${PORT}`);
+        });
+    } catch (err) {
+        console.error('❌ Failed to start Live-score Service:', err.message);
+        process.exit(1); 
+    }
+};
+
+startServer();
