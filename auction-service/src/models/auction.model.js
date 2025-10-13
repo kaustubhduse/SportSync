@@ -1,4 +1,4 @@
-// src/models/auction.model.js
+// models/auction.model.js
 import mongoose from "mongoose";
 
 export const CategoryEnum = [
@@ -63,24 +63,22 @@ const teamPlayerSchema = new mongoose.Schema(
 );
 
 // Team schema for Auction.teams
-const teamSchema = new mongoose.Schema(
-  {
-    ownerId: {
-      type: String,
-      required: true,
-      ref: "User",
-    },
-    ownerName: {
-      type: String,
-      required: true,
-    },
-    teamName: {
-      type: String,
-      required: true,
-    },
-    players: [teamPlayerSchema], // corrected
+const teamSchema = new mongoose.Schema({
+  ownerId: {
+    type: String,
+    required: true,
+    ref: "User",
   },
-);
+  ownerName: {
+    type: String,
+    required: true,
+  },
+  teamName: {
+    type: String,
+    required: true,
+  },
+  players: [teamPlayerSchema], // corrected
+});
 
 // Main auction schema
 const auctionSchema = new mongoose.Schema(
@@ -114,7 +112,21 @@ const auctionSchema = new mongoose.Schema(
     auctionLocation: {
       type: String,
       required: true,
+    }, // --- NEW FIELDS FOR LIVE BIDDING ---
+    currentBid: {
+      type: Number,
+      required: true,
+      default: 0,
     },
+    currentBidderId: {
+      type: String,
+      default: null,
+      ref: "User",
+    },
+    currentBidderName: {
+      type: String,
+      default: null,
+    }, // -----------------------------------
     players: [playerSchema],
     teams: [teamSchema],
   },

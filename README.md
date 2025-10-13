@@ -66,6 +66,7 @@ The application comprises **6 independent microservices**:
 - Consumes participant data from RabbitMQ.
 - Fetches event information from the event-service.
 - Conducts live auctions using Socket.IO.
+- Uses Lua script for solving problem of coccurrent bids
 - Stores ongoing auction data in Redis for quick access.
 
 ### Live Score Service
